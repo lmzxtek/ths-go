@@ -1,4 +1,4 @@
-module ths
+module github.com/lmzxtek/ths-go
 
 go 1.24.0
 

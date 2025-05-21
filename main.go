@@ -3,12 +3,14 @@ package main
 import (
 	"fmt"
 	"os"
-	"ths/cxz"
-	"ths/gm"
+
+	"github.com/lmzxtek/ths-go/cxz"
+	"github.com/lmzxtek/ths-go/gm"
 )
 
-// var gmURL = "http://45.154.14.186:5000"  // locVPS-kr
-var gmURL = "http://111.67.205.166:5000" // uDouYun-bj
+var gmURL = "http://45.154.14.186:5000" // locVPS-kr
+// var gmURL = "http://38.55.125.67:5000" // locVPS-hk2
+// var gmURL = "http://111.67.205.166:5000" // uDouYun-bj
 
 func main() {
 	args := os.Args[1:] // os.Args[0] 是脚本名，后面是参数

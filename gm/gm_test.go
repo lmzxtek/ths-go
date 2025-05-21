@@ -1,14 +1,15 @@
-package main
+package gm
 
 import (
 	"fmt"
 	"strings"
+	"testing"
 
 	"github.com/go-gota/gota/dataframe"
 )
 
 // TestReadCSV is a test function to read CSV file and print the dataframe
-func TestReadCSV() {
+func TestReadCSV(t *testing.T) {
 	fmt.Println("\n >>> Start read dataframe... ")
 
 	csvStr := `
@@ -30,7 +31,7 @@ Spain,2012-02-01,66,555.42,00241
 }
 
 // TestReadJSON is a test function to read JSON file and print the dataframe
-func TestReadJSON() {
+func TestReadJSON(t *testing.T) {
 	jsonStr := `[{"COL.2":1,"COL.3":3},{"COL.1":5,"COL.2":2,"COL.3":2},{"COL.1":6,"COL.2":3,"COL.3":1}]`
 	df := dataframe.ReadJSON(strings.NewReader(jsonStr))
 	fmt.Println(df)
@@ -38,7 +39,7 @@ func TestReadJSON() {
 }
 
 // TestloadRecords is a test function to load records and print the dataframe
-func TestloadRecords() {
+func TestLoadRecords(t *testing.T) {
 	rec := [][]string{
 		{"A", "B", "C", "D"},
 		{"a", "4", "5.1", "true"},
@@ -53,7 +54,7 @@ func TestloadRecords() {
 }
 
 // TestloadStructs is a test function to load structs and print the dataframe
-func TestloadStructs() {
+func TestLoadStructs(t *testing.T) {
 	type User struct {
 		Name     string
 		Age      int

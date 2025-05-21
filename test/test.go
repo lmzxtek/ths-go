@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"ths/gm"
+
+	"github.com/lmzxtek/ths-go/gm"
 )
 
 // var gmURL = "http://45.154.14.186:5000"  // locVPS-kr

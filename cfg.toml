@@ -1,0 +1,58 @@
+# gm-api配置信息
+
+[ths]
+debug    = true
+data_dir = 'data_ths' # 生成结果的子文件夹
+ths_dir  = 'C:/同花顺远航版/bin/users/gfjykldd/function/candle'
+
+# csv_ip   = 'localhost'
+csv_port = 5002
+# gm_ip    = 'localhost'
+gm_port  = 5000
+
+# gm_ip = '[240e:974:eb00:1102::dfd:24b]'     # BigC-CD-8C16G-AMD 
+# gm_ip = '[240e:974:eb00:1102::dfd:533]'     # BigC-CD-8C16G-1  
+gm_ip = '[240e:974:eb00:1102::dfd:3e9]'     # BigC-CD-4C8G 
+# gm_ip = '[240e:974:eb00:1102::dfd:1c8]'     # BigC-CQ-2C4G 
+
+# csv_ip = '[240e:974:eb00:1102::dfd:24b]'     # BigC-CD-8C16G-AMD 
+# csv_ip = '[240e:974:eb00:1102::dfd:533]'     # BigC-CD-8C16G-1  
+csv_ip = '[240e:974:eb00:1102::dfd:3e9]'     # BigC-CD-4C8G 
+# csv_ip = '[240e:974:eb00:1102::dfd:1c8]'     # BigC-CQ-2C4G 
+
+# csv_port = 5002
+# gm_port  = 5000
+
+# csv_ip   = 'gmd.zhwdk.com'
+# csv_ip   = 'gmdus.zhwdk.com'
+# gm_ip    = 'gm.zhwdk.com'
+# gm_ip    = 'gmgc.zhwdk.com'
+
+# csv_port = 443
+# gm_port  = 443
+
+count = 600         # K线数量 
+symbols = [
+    'SHSE.601088',  # 中国神华
+    'SHSE.000001',  # 上证指数
+    'SZSE.001696',  # 宗申动力
+    'SZSE.300917',  # 特发服务
+    'SZSE.000062',  # 深圳华强
+    'SZSE.399006',  # 创业板指
+    'SZSE.399001',  # 深证成指
+    'SHSE.000300',  # 沪深300
+    'SHSE.510880',  # 红利ETF
+    ]
+
+index_list = [
+    'SHSE.000001',  # 上证指数
+    ]
+
+
+# server = 'gmgc.zhwdk.com'   # VKVM-jp
+# server = 'gmtc.zhwdk.com'   # Tecent-jp
+# server = 'gmcc.zhwdk.com'   # CC2 > ColoCrossing
+# server = '8.130.19.198'                   # AliYun 
+# server = '107.175.54.121'                 # colocrossing 
+# server = '[2408:871a:b000:2::ea13]'       # 8465-HB-4C4G 
+# server = '[2408:871a:b000:2::fa74]'       # 8465-HB-2C2G 

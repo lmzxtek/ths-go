@@ -1,0 +1,37 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24'
+
+    - name: Build All Platforms
+      run: |
+        mkdir -p bin
+        PLATFORMS="windows/amd64 linux/amd64 darwin/amd64 darwin/arm64"
+        for PLATFORM in $PLATFORMS; do
+          GOOS=${PLATFORM%/*}
+          GOARCH=${PLATFORM#*/}
+          OUTPUT="bin/hello-${GOOS}-${GOARCH}"
+          if [ $GOOS = "windows" ]; then
+            OUTPUT+='.exe'
+          fi
+          GOOS=$GOOS GOARCH=$GOARCH go build -o $OUTPUT .
+        done
+
+    - name: Upload Release Assets
+      uses: softprops/action-gh-release@v1
+      with:
+        files: bin/*

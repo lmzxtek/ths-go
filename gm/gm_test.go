@@ -1,12 +1,33 @@
 package gm
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/go-gota/gota/dataframe"
 )
+
+var gmURL = "http://45.154.14.186:5000" // locVPS-kr
+
+// TestReadCSV is a test function to read CSV file and print the dataframe
+func TestCSV(t *testing.T) {
+	jsonStr := `{
+		"columns":["Symbol","Time","Price","Volume"],
+		"data":[
+			["AAPL","2025-03-01",100,200],
+			["AAPL","2025-03-01",101,210],
+			["AAPL","2025-03-01",102,220],
+			["AAPL","2025-03-01",103,230],
+			["AAPL","2025-03-01",104,240]]
+	}`
+	df, err := ParseJsonToDataframe(jsonStr)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	fmt.Println(df)
+}
 
 // TestReadCSV is a test function to read CSV file and print the dataframe
 func TestReadCSV(t *testing.T) {
@@ -38,7 +59,56 @@ func TestReadJSON(t *testing.T) {
 
 }
 
+// TestReadJSON is a test function to read JSON file and print the dataframe
+func TestParseJsonToDataframe(t *testing.T) {
+	jsonStr := `{"columns":["Symbol","Time","Price","Volume"],"data":[["AAPL","2025-05-01",100,200],["AAPL","2025-05-01",101,210],["AAPL","2025-05-01",102,220],["AAPL","2025-05-01",103,230],["AAPL","2025-05-01",104,240]]}`
+	df, err := ParseJsonToDataframe(jsonStr)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	fmt.Println(df)
+}
+
+func TestJsonDF(t *testing.T) {
+	jsonData := []byte(`{
+			"columns": ["Symbol","Time","Price","Volume"],
+			"data": [["AAPL","2025-05-01",100,200],["AAPL","2025-05-01",101,210]]
+		}`)
+
+	// 解析原始数据
+	var raw RawData
+	if err := json.Unmarshal(jsonData, &raw); err != nil {
+		panic(err)
+	}
+
+	fmt.Println("表头:\n", raw.Columns)
+	fmt.Println("数据:\n", raw.Data)
+
+	// df := dataframe.LoadRecords(raw.Data)
+	// df := dataframe.LoadRecords(
+	// 	[][]string{
+	// 		{"A", "B", "C", "D"},
+	// 		{"a", "4", "5.1", "true"},
+	// 		{"k", "5", "7.0", "true"},
+	// 		{"k", "4", "6.0", "true"},
+	// 		{"a", "2", "7.1", "false"},
+	// 	},
+	// )
+	// fmt.Println(df)
+
+	// 转换为列式存储
+	df, err := ConvertToColumnar(raw)
+	if err != nil {
+		panic(err)
+	}
+
+	// 示例输出
+	fmt.Println("Symbol列:", df["Symbol"])
+	fmt.Println("Price列 :", df["Price"])
+}
+
 // TestloadRecords is a test function to load records and print the dataframe
+// 测试Dataframe的LoadRecords方法
 func TestLoadRecords(t *testing.T) {
 	rec := [][]string{
 		{"A", "B", "C", "D"},
@@ -53,7 +123,8 @@ func TestLoadRecords(t *testing.T) {
 	fmt.Println(df)
 }
 
-// TestloadStructs is a test function to load structs and print the dataframe
+// 测试Dataframe的LoadStructs方法
+// 测试结构体
 func TestLoadStructs(t *testing.T) {
 	type User struct {
 		Name     string
@@ -67,4 +138,76 @@ func TestLoadStructs(t *testing.T) {
 	}
 	df := dataframe.LoadStructs(users)
 	fmt.Println(df)
+}
+
+func TestDFGetTest(t *testing.T) {
+	fmt.Println(" -=> Start fetch df from url(Test) ... ")
+	df, err := DfGetTest(gmURL)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	fmt.Println(df)
+	// cxz.SaveDataframeToCSV(&df, "data.csv")
+	// cxz.SaveDataframeToCSVxz(&df, "data.csv.xz")
+}
+
+func TestDFGetTest2(t *testing.T) {
+	fmt.Println(" -=> Start fetch df from url(Test2) ... ")
+	df, err := DfGetTest2(gmURL)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	fmt.Println(df)
+	// cxz.SaveDataframeToCSV(&df, "data.csv")
+	// cxz.SaveDataframeToCSVxz(&df, "data.csv.xz")
+}
+
+func TestGetCurrent(t *testing.T) {
+	fmt.Println(" -=> Start fetch current snap data using GM-api ... ")
+
+	url := gmURL
+	timeoutSeconds := 10
+
+	symbols := "SHSE.601088,SZSE.300917"
+	resp, err := GetCurrent(symbols, url, timeoutSeconds)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	fmt.Println(string(resp))
+}
+
+func TestGetDFKbars(t *testing.T) {
+	fmt.Println(" -=> Start fetch kbars history data using GM-api ... ")
+
+	url := gmURL
+	timeoutSeconds := 10
+
+	symbols := "SHSE.601088,SZSE.300917"
+	sdate := "2025-05-01"
+	edate := "2025-05-12"
+	tag := "1d"
+
+	df, err := DfGetKbars(symbols, tag, sdate, edate, url, timeoutSeconds)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	fmt.Println(df)
+}
+
+func TestGetKbars(t *testing.T) {
+	fmt.Println(" -=> Start fetch kbars history data using GM-api ... ")
+
+	url := gmURL
+	timeoutSeconds := 10
+
+	symbols := "SHSE.601088,SZSE.300917"
+	sdate := "2025-05-01"
+	edate := "2025-05-12"
+	tag := "1d"
+
+	resp, err := GetKbarsHis(symbols, tag, sdate, edate, url, timeoutSeconds)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	fmt.Println(string(resp))
 }

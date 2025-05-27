@@ -8,8 +8,8 @@ import (
 	"github.com/lmzxtek/ths-go/gm"
 )
 
-// var gmURL = "http://45.154.14.186:5000"  // locVPS-kr
-var gmURL = "http://111.67.205.166:5000" // uDouYun-bj
+var gmURL = "http://45.154.14.186:5000" // locVPS-kr
+// var gmURL = "http://111.67.205.166:5000" // uDouYun-bj
 
 func main() {
 	// fmt.Println(" -=> Start fetch url... ")

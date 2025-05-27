@@ -1,0 +1,4 @@
+[api]
+port = 8080
+gmapi = "https://localhost:5000"
+gmcsv = "https://localhost:5002"

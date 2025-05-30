@@ -9,7 +9,8 @@ import (
 	"github.com/go-gota/gota/dataframe"
 )
 
-var gmURL = "http://45.154.14.186:5000" // locVPS-kr
+// var gmURL = "http://45.154.14.186:5000" // locVPS-kr
+var gmURL = "http://localhost:5000"
 
 // TestReadCSV is a test function to read CSV file and print the dataframe
 func TestCSV(t *testing.T) {
@@ -162,6 +163,22 @@ func TestDFGetTest2(t *testing.T) {
 	// cxz.SaveDataframeToCSVxz(&df, "data.csv.xz")
 }
 
+func TestGetCalendar(t *testing.T) {
+	fmt.Println(" -=> Start fetch calendarusing GM-api ... ")
+
+	timeoutSeconds := 10
+	url := gmURL
+	syear := "2025"
+	eyear := "2025"
+	exchange := "" // "SHSE"
+
+	resp, err := GetCalendar(url, syear, eyear, exchange, timeoutSeconds)
+	if err != nil {
+		fmt.Printf(" 获取数据失败(gm.GetCalendar): %v\n", err)
+	}
+	fmt.Println(string(resp))
+}
+
 func TestGetCurrent(t *testing.T) {
 	fmt.Println(" -=> Start fetch current snap data using GM-api ... ")
 
@@ -169,7 +186,22 @@ func TestGetCurrent(t *testing.T) {
 	timeoutSeconds := 10
 
 	symbols := "SHSE.601088,SZSE.300917"
-	resp, err := GetCurrent(symbols, url, timeoutSeconds)
+	// resp, err := GetCurrent(url, symbols, timeoutSeconds, false)
+	resp, err := GetCurrent(url, symbols, timeoutSeconds, true)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	fmt.Println(string(resp))
+}
+func TestGetCurrent2(t *testing.T) {
+	fmt.Println(" -=> Start fetch current snap data using GM-api ... ")
+
+	url := gmURL
+	timeoutSeconds := 10
+
+	symbols := "SHSE.601088,SHSE.000001"
+	resp, err := GetCurrent(url, symbols, timeoutSeconds, false)
+	// resp, err := GetCurrent(url, symbols, timeoutSeconds, true)
 	if err != nil {
 		fmt.Printf("获取数据失败: %s\n", err)
 	}
@@ -200,14 +232,32 @@ func TestGetKbars(t *testing.T) {
 	url := gmURL
 	timeoutSeconds := 10
 
-	symbols := "SHSE.601088,SZSE.300917"
-	sdate := "2025-05-01"
-	edate := "2025-05-12"
-	tag := "1d"
+	// symbols := "SHSE.601088,SZSE.300917"
+	symbols := "SHSE.601088"
+	sdate := "2025-05-29"
+	edate := "2025-05-29"
+	// tag := "1d"
+	tag := "1m"
 
 	resp, err := GetKbarsHis(symbols, tag, sdate, edate, url, timeoutSeconds)
 	if err != nil {
 		fmt.Printf("获取数据失败: %s\n", err)
 	}
-	fmt.Println(string(resp))
+	// fmt.Println(string(resp))
+
+	var rcd RawColData
+	unmarshalErr := json.Unmarshal(resp, &rcd)
+	if unmarshalErr != nil {
+		fmt.Printf("将字节解组为 RawColData 结构体失败: %v\n", unmarshalErr)
+	} else {
+		// 处理获取到的 JSON 数据为 records 形式
+		records, transformErr := rcd.TransformToRecords()
+		if transformErr != nil {
+			fmt.Printf("转换为 records 格式失败: %v\n", transformErr)
+		} else {
+			fmt.Println("\n--- 转换后的 records 格式 ---")
+			recordsJSON, _ := json.MarshalIndent(records[:5], "", "  ") // 格式化输出 JSON
+			fmt.Printf("%s\n", recordsJSON)
+		}
+	}
 }

@@ -134,7 +134,7 @@ func DfGetCurrent(symbols string, url string, timeoutSeconds int) (dataframe.Dat
 	// tarurl := fmt.Sprintf("%s/get_current", url)
 
 	// 获取历史K线数据
-	resp, err := GetCurrent(symbols, url, timeoutSeconds)
+	resp, err := GetCurrent(symbols, url, timeoutSeconds, true)
 	if err != nil {
 		// fmt.Printf("获取数据失败: %s\n", err)
 		return dataframe.DataFrame{}, err

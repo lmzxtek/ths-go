@@ -186,16 +186,43 @@ func GetTest2(url string, timeoutSeconds int) ([]byte, error) {
 	return resp, nil
 }
 
-// 获取行情快照数据
-func GetCurrent(symbols string, url string, timeoutSeconds int) ([]byte, error) {
-	urlTar := fmt.Sprintf("%s/get_current", url)
+// 获取交易日历
+func GetCalendar(gmapi string, syear string, eyear string, exchange string, timeoutSeconds int) ([]byte, error) {
+	url := fmt.Sprintf("%s/get_dates_by_year", gmapi)
+	params := map[string]string{
+		"syear": syear,
+		"eyear": eyear,
+	}
+	if exchange != "" {
+		params["exchange"] = exchange
+	}
 
 	// 获取历史K线数据
-	resp, err := fetchURLData(urlTar, time.Duration(timeoutSeconds)*time.Second, map[string]string{
-		"symbols": symbols,
-	})
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
 	if err != nil {
-		fmt.Printf("获取数据失败: %s\n", err)
+		// fmt.Printf(" 获取数据失败(gm.GetCalendar): %v\n", err)
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+// 获取行情快照数据
+func GetCurrent(gmapi string, symbols string, timeoutSeconds int, split bool) ([]byte, error) {
+	url := fmt.Sprintf("%s/get_current", gmapi)
+	params := map[string]string{
+		"symbols": symbols,
+	}
+	if split {
+		params["split"] = "true"
+	} else {
+		params["split"] = "false"
+	}
+
+	// 获取历史K线数据
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		// fmt.Printf("获取数据失败: %s\n", err)
 		return nil, err
 	}
 
@@ -203,22 +230,23 @@ func GetCurrent(symbols string, url string, timeoutSeconds int) ([]byte, error) 
 }
 
 // 获取K线行情数据
-func GetKbarsHis(
+func GetKbarsHis(gmapi string,
 	symbols string, tag string,
 	sdate string, edate string,
-	url string, timeoutSeconds int) ([]byte, error) {
+	timeoutSeconds int) ([]byte, error) {
 
-	urlTar := fmt.Sprintf("%s/get_his", url)
-
-	// 获取历史K线数据
-	resp, err := fetchURLData(urlTar, time.Duration(timeoutSeconds)*time.Second, map[string]string{
+	url := fmt.Sprintf("%s/get_his", gmapi)
+	params := map[string]string{
 		"symbols": symbols,
 		"tag":     tag,
 		"sdate":   sdate,
 		"edate":   edate,
-	})
+	}
+
+	// 获取历史K线数据
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
 	if err != nil {
-		fmt.Printf("获取数据失败: %s\n", err)
+		// fmt.Printf("获取数据失败: %s\n", err)
 		return nil, err
 	}
 
@@ -226,22 +254,49 @@ func GetKbarsHis(
 }
 
 // 获取K线行情数据
-func GetKbarsHisN(
-	symbols string, tag string,
-	count int, edate string,
-	url string, timeoutSeconds int) ([]byte, error) {
+func GetKbarsHisN(gmapi string,
+	symbol string, tag string,
+	count string, edate string,
+	timeoutSeconds int) ([]byte, error) {
 
-	urlTar := fmt.Sprintf("%s/get_his_n", url)
+	url := fmt.Sprintf("%s/get_his_n", gmapi)
+	params := map[string]string{
+		"symbol": symbol,
+		"tag":    tag,
+		"edate":  edate,
+	}
+	if count != "" {
+		params["count"] = count
+	}
 
 	// 获取历史K线数据
-	resp, err := fetchURLData(urlTar, time.Duration(timeoutSeconds)*time.Second, map[string]string{
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		// fmt.Printf("获取数据失败: %s\n", err)
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+// 获取K线行情数据
+func GetCSVMonth(
+	symbols string, tag string,
+	count int, edate string,
+	gmapi string, timeoutSeconds int) ([]byte, error) {
+
+	url := fmt.Sprintf("%s/get_his_n", gmapi)
+	params := map[string]string{
 		"symbols": symbols,
 		"tag":     tag,
 		"count":   fmt.Sprintf("%d", count),
 		"edate":   edate,
-	})
+	}
+
+	// 获取历史K线数据
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
 	if err != nil {
-		fmt.Printf("获取数据失败: %s\n", err)
+		// fmt.Printf("获取数据失败: %s\n", err)
 		return nil, err
 	}
 

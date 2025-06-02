@@ -154,7 +154,7 @@ func GetURLWithRetry(url string, params map[string]string, connectTimeout time.D
 	}
 
 	var lastErr error
-	for i := 0; i < maxRetries; i++ {
+	for range maxRetries {
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			lastErr = fmt.Errorf("failed to create request: %w", err)

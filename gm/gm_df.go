@@ -93,11 +93,11 @@ func ConvertToColumnar(raw RawData) (map[string][]any, error) {
 }
 
 // 测试数据1
-func DfGetTest(url string) (dataframe.DataFrame, error) {
+func DfGetTest(gmapi string) (dataframe.DataFrame, error) {
 	// tarurl := fmt.Sprintf("%s/test", url)
 
 	// 获取历史K线数据
-	resp, err := GetTest(url, 10)
+	resp, err := GetTest(gmapi, 10)
 	if err != nil {
 		// fmt.Printf("获取数据失败: %s\n", err)
 		return dataframe.DataFrame{}, err
@@ -108,11 +108,11 @@ func DfGetTest(url string) (dataframe.DataFrame, error) {
 }
 
 // 测试数据2
-func DfGetTest2(url string) (dataframe.DataFrame, error) {
+func DfGetTest2(gmapi string) (dataframe.DataFrame, error) {
 	// tarurl := fmt.Sprintf("%s/test", url)
 
 	// 获取历史K线数据
-	resp, err := GetTest2(url, 10)
+	resp, err := GetTest2(gmapi, 10)
 	if err != nil {
 		// fmt.Printf("获取数据失败: %s\n", err)
 		return dataframe.DataFrame{}, err
@@ -130,11 +130,11 @@ func DfGetTest2(url string) (dataframe.DataFrame, error) {
 }
 
 // 获取最新行情快照，返回 DataFrame
-func DfGetCurrent(symbols string, url string, timeoutSeconds int) (dataframe.DataFrame, error) {
+func DfGetCurrent(gmapi string, symbols string, timeoutSeconds int) (dataframe.DataFrame, error) {
 	// tarurl := fmt.Sprintf("%s/get_current", url)
 
 	// 获取历史K线数据
-	resp, err := GetCurrent(symbols, url, timeoutSeconds, true)
+	resp, err := GetCurrent(gmapi, symbols, timeoutSeconds, true)
 	if err != nil {
 		// fmt.Printf("获取数据失败: %s\n", err)
 		return dataframe.DataFrame{}, err
@@ -149,11 +149,11 @@ func DfGetCurrent(symbols string, url string, timeoutSeconds int) (dataframe.Dat
 }
 
 // 获取K线数据，返回 DataFrame
-func DfGetKbars(symbols string, tag string, sdate string, edate string, url string, timeoutSeconds int) (dataframe.DataFrame, error) {
+func DfGetKbars(gmapi string, symbols string, tag string, sdate string, edate string, timeoutSeconds int) (dataframe.DataFrame, error) {
 	// tarurl := fmt.Sprintf("%s/get_current", url)
 
 	// 获取历史K线数据
-	resp, err := GetKbarsHis(symbols, tag, sdate, edate, url, timeoutSeconds)
+	resp, err := GetKbarsHis(gmapi, symbols, tag, sdate, edate, timeoutSeconds)
 	if err != nil {
 		// fmt.Printf("获取数据失败: %s\n", err)
 		return dataframe.DataFrame{}, err

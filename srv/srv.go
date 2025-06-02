@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -215,6 +216,67 @@ func RouteCalendar(c *gin.Context) {
 	c.JSON(http.StatusOK, records)
 }
 
+func RouteDatesPrevN(c *gin.Context) {
+	today := time.Now().Format("2006-01-02")
+	date := c.DefaultQuery("date", "")
+	if date == "" {
+		date = today
+	}
+	scount := c.DefaultQuery("count", "10")
+	count, err := strconv.Atoi(scount)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{" Err(count)": err.Error()})
+		return
+	}
+
+	timeoutSeconds := 10
+
+	rawData, err := gm.GetPrevN(gmapi, date, count, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetCurrent)": err.Error()})
+		return
+	}
+
+	// 将获取到的字符串数据解析为 JSON 格式
+	var data any
+	if err = json.Unmarshal(rawData, &data); err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(unmarshaling JSON)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, data)
+	// c.JSON(http.StatusOK, records)
+}
+
+func RouteDatesNextN(c *gin.Context) {
+	today := time.Now().Format("2006-01-02")
+	date := c.DefaultQuery("date", "")
+	if date == "" {
+		date = today
+	}
+	scount := c.DefaultQuery("count", "10")
+	count, err := strconv.Atoi(scount)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{" Err(count)": err.Error()})
+		return
+	}
+
+	timeoutSeconds := 10
+
+	rawData, err := gm.GetNextN(gmapi, date, count, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetCurrent)": err.Error()})
+		return
+	}
+
+	// 将获取到的字符串数据解析为 JSON 格式
+	var data any
+	if err = json.Unmarshal(rawData, &data); err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(unmarshaling JSON)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, data)
+	// c.JSON(http.StatusOK, records)
+}
 func RouteCurrent(c *gin.Context) {
 	symbols := c.DefaultQuery("symbols", "")
 	if symbols == "" {
@@ -229,28 +291,14 @@ func RouteCurrent(c *gin.Context) {
 		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetCurrent)": err.Error()})
 		return
 	}
-	// ss := fmt.Sprintf("%v", string(rawData))
-	// c.JSON(http.StatusOK, ss)
-	c.JSON(http.StatusOK, string(rawData))
-	// c.JSON(http.StatusOK, json.Unmarshal(rawData, &[]map[string]any{}))
-	// fmt.Printf("%s\n", string(rawData))
-	// c.JSON(http.StatusOK, fmt.Sprintf("%q", string(rawData)))
-	// c.JSON(http.StatusOK, strconv.Quote(string(rawData)))
 
-	// var rcd RawColData
-	// unmarshalErr := json.Unmarshal(rawData, &rcd)
-	// if unmarshalErr != nil {
-	// 	c.JSON(http.StatusNotFound, unmarshalErr)
-	// 	return
-	// }
-
-	// // 处理获取到的 JSON 数据为 records 形式
-	// records, transformErr := rcd.TransformToRecords()
-	// if transformErr != nil {
-	// 	c.JSON(http.StatusNotFound, gin.H{" Err(TransformToRecords)": transformErr.Error()})
-	// 	return
-	// }
-
+	// 将获取到的字符串数据解析为 JSON 格式
+	var data any
+	if err = json.Unmarshal(rawData, &data); err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(unmarshaling JSON)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, data)
 	// c.JSON(http.StatusOK, records)
 }
 
@@ -329,29 +377,30 @@ func RouteCSVMonth(c *gin.Context) {
 		return
 	}
 
-	today := time.Now().Format("2006-01-02")
-	sdate := c.DefaultQuery("syear", today)
-	edate := c.DefaultQuery("eyear", today)
-	tag := c.DefaultQuery("tag", "1m")
 	timeoutSeconds := 10
+	now := time.Now()
+	year, month, _ := now.Date()
+	yearStr := fmt.Sprintf("%d", year)
+	monthStr := fmt.Sprintf("%02d", month)
 
-	rawData, err := gm.GetKbarsHis(gmcsv, symbol, tag, sdate, edate, timeoutSeconds)
+	cyear := c.DefaultQuery("year", yearStr)
+	cmonth := c.DefaultQuery("month", monthStr)
+	// tag := c.DefaultQuery("tag", "1m")
+	tag := "1m"
+	imonth, _ := strconv.Atoi(cmonth)
+	iyear, _ := strconv.Atoi(cyear)
+
+	rawData, err := gm.GetCSVMonth(gmcsv, symbol, tag, imonth, iyear, timeoutSeconds)
 	if err != nil {
-		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetKbarsHis)": err.Error()})
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetCSVMonth)": err.Error()})
 		return
 	}
-
-	var rcd RawColData
-	if unmarshalErr := json.Unmarshal(rawData, &rcd); unmarshalErr != nil {
-		c.JSON(http.StatusNotFound, gin.H{" Err(unmarshalErr)": unmarshalErr.Error()})
+	// c.JSON(http.StatusOK, string(rawData))
+	// 将获取到的字符串数据解析为 JSON 格式
+	var data any
+	if err = json.Unmarshal(rawData, &data); err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(unmarshaling JSON)": err.Error()})
 		return
 	}
-
-	records, transformErr := rcd.TransformToRecords()
-	if transformErr != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{" Err(transformErr)": transformErr.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, records)
+	c.JSON(http.StatusOK, data)
 }

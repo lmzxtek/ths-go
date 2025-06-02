@@ -11,6 +11,7 @@ import (
 
 // var gmURL = "http://45.154.14.186:5000" // locVPS-kr
 var gmURL = "http://localhost:5000"
+var gmCSV = "http://localhost:5002"
 
 // TestReadCSV is a test function to read CSV file and print the dataframe
 func TestCSV(t *testing.T) {
@@ -164,7 +165,7 @@ func TestDFGetTest2(t *testing.T) {
 }
 
 func TestGetCalendar(t *testing.T) {
-	fmt.Println(" -=> Start fetch calendarusing GM-api ... ")
+	fmt.Println(" -=> Start fetch calendar using GM-api ... ")
 
 	timeoutSeconds := 10
 	url := gmURL
@@ -179,6 +180,36 @@ func TestGetCalendar(t *testing.T) {
 	fmt.Println(string(resp))
 }
 
+func TestGetPrevN(t *testing.T) {
+	fmt.Println(" -=> Start fetch prev_n GM-api ... ")
+
+	timeoutSeconds := 10
+	url := gmURL
+
+	date := "2025-05-01"
+	count := 5
+
+	resp, err := GetPrevN(url, date, count, timeoutSeconds)
+	if err != nil {
+		fmt.Printf(" 获取数据失败(gm.GetPrevN): %v\n", err)
+	}
+	fmt.Println(string(resp))
+}
+func TestGetNextN(t *testing.T) {
+	fmt.Println(" -=> Start fetch next_n GM-api ... ")
+
+	timeoutSeconds := 10
+	url := gmURL
+
+	date := "2025-05-11"
+	count := 5
+
+	resp, err := GetNextN(url, date, count, timeoutSeconds)
+	if err != nil {
+		fmt.Printf(" 获取数据失败(gm.GetNextN): %v\n", err)
+	}
+	fmt.Println(string(resp))
+}
 func TestGetCurrent(t *testing.T) {
 	fmt.Println(" -=> Start fetch current snap data using GM-api ... ")
 
@@ -224,6 +255,47 @@ func TestGetDFKbars(t *testing.T) {
 		fmt.Printf("获取数据失败: %s\n", err)
 	}
 	fmt.Println(df)
+}
+
+func TestFetchData(t *testing.T) {
+	fmt.Println(" -=> Start download test.txt file ... ")
+
+	url := "http://localhost:5002/download/test.txt"
+
+	rsp, err := FetchData(url)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	fmt.Println(string(rsp))
+}
+
+func TestDownloadCSV(t *testing.T) {
+	fmt.Println(" -=> Start download csv.xz file month... ")
+
+	url := "http://localhost:5002/download/kbars-month/month-2025/month-2025-05--SH-60/kbars-1m--SHSE.601088--2025-05-.csv.xz"
+
+	rsp, err := DownloadAndConvertToJSON(url)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	fmt.Println(rsp)
+}
+
+func TestGetCSVMonth(t *testing.T) {
+	fmt.Println(" -=> Start fetch csv.xz file month... ")
+
+	url := gmCSV
+
+	symbol := "SHSE.601088"
+	tag := "1m"
+	month := 5
+	year := 2025
+
+	rsp, err := GetCSVMonth(url, symbol, tag, month, year, 10)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	fmt.Println(string(rsp))
 }
 
 func TestGetKbars(t *testing.T) {

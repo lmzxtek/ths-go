@@ -370,7 +370,7 @@ func RouteKbarsN(c *gin.Context) {
 	c.JSON(http.StatusOK, records)
 }
 
-func RouteCSVMonth(c *gin.Context) {
+func RouteCSVxzMonth(c *gin.Context) {
 	symbol := c.DefaultQuery("symbol", "")
 	if symbol == "" {
 		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须参数"))
@@ -386,11 +386,41 @@ func RouteCSVMonth(c *gin.Context) {
 	cyear := c.DefaultQuery("year", yearStr)
 	cmonth := c.DefaultQuery("month", monthStr)
 	// tag := c.DefaultQuery("tag", "1m")
-	tag := "1m"
 	imonth, _ := strconv.Atoi(cmonth)
 	iyear, _ := strconv.Atoi(cyear)
 
-	rawData, err := gm.GetCSVMonth(gmcsv, symbol, tag, imonth, iyear, timeoutSeconds)
+	rawData, err := gm.GetCSVMonth(gmcsv, symbol, imonth, iyear, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetCSVMonth)": err.Error()})
+		return
+	}
+	// c.JSON(http.StatusOK, string(rawData))
+	// 将获取到的字符串数据解析为 JSON 格式
+	var data any
+	if err = json.Unmarshal(rawData, &data); err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(unmarshaling JSON)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, data)
+}
+
+func RouteCSVxzYear(c *gin.Context) {
+	symbol := c.DefaultQuery("symbol", "")
+	if symbol == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须参数"))
+		return
+	}
+
+	timeoutSeconds := 10
+	now := time.Now()
+	year := now.Year()
+	yearStr := fmt.Sprintf("%d", year)
+
+	cyear := c.DefaultQuery("year", yearStr)
+	tag := c.DefaultQuery("tag", "1m")
+	iyear, _ := strconv.Atoi(cyear)
+
+	rawData, err := gm.GetCSVYear(gmcsv, symbol, tag, iyear, timeoutSeconds)
 	if err != nil {
 		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetCSVMonth)": err.Error()})
 		return

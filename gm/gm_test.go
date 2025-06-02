@@ -287,11 +287,29 @@ func TestGetCSVMonth(t *testing.T) {
 	url := gmCSV
 
 	symbol := "SHSE.601088"
-	tag := "1m"
+	// tag := "1m"
 	month := 5
 	year := 2025
 
-	rsp, err := GetCSVMonth(url, symbol, tag, month, year, 10)
+	rsp, err := GetCSVMonth(url, symbol, month, year, 10)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	fmt.Println(string(rsp))
+}
+
+func TestGetCSVYear(t *testing.T) {
+	fmt.Println(" -=> Start fetch csv.xz file year... ")
+
+	url := gmCSV
+
+	symbol := "SHSE.601088"
+	// tag := "1m"
+	// tag := "vv"
+	tag := "pe"
+	year := 2025
+
+	rsp, err := GetCSVYear(url, symbol, tag, year, 10)
 	if err != nil {
 		fmt.Printf("获取数据失败: %s\n", err)
 	}

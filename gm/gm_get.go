@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -466,8 +467,8 @@ func downloadAndReadData(url string) ([]byte, error) {
 	return data, nil
 }
 
-// csvToJSON 将CSV数据转换为JSON格式
-func csvToJSON(csvData []byte) ([]byte, error) {
+// csvToJSON 将CSV数据转换为JSON格式(不进行类型判断)
+func CsvToJSON(csvData []byte) ([]byte, error) {
 	// 创建CSV读取器
 	reader := csv.NewReader(strings.NewReader(string(csvData)))
 
@@ -485,9 +486,9 @@ func csvToJSON(csvData []byte) ([]byte, error) {
 	headers := records[0]
 
 	// 将每一行数据转换为map
-	var result []map[string]string
+	var result []map[string]any
 	for i := 1; i < len(records); i++ {
-		row := make(map[string]string)
+		row := make(map[string]any)
 		for j, value := range records[i] {
 			if j < len(headers) {
 				row[headers[j]] = value
@@ -505,6 +506,71 @@ func csvToJSON(csvData []byte) ([]byte, error) {
 	return jsonData, nil
 }
 
+// CSVToJson reads a CSV file and converts its content to a JSON array of objects.
+// It attempts to infer data types for each field (int, float, bool, string).
+func CSVToJson(csvData []byte) ([]byte, error) {
+
+	reader := csv.NewReader(strings.NewReader(string(csvData)))
+
+	// 读取所有CSV记录
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, fmt.Errorf("解析CSV失败: %w", err)
+	}
+
+	if len(records) == 0 {
+		return nil, fmt.Errorf("CSV文件为空")
+	}
+
+	// 第一行作为表头
+	headers := records[0]
+	// 将每一行数据转换为map
+	var result []map[string]any
+	for i := 1; i < len(records); i++ {
+		row := make(map[string]any)
+		for j, value := range records[i] {
+			if j < len(headers) {
+				// row[headers[j]] = value
+				parsedValue := parseValue(value)
+				row[headers[j]] = parsedValue
+			}
+		}
+		result = append(result, row)
+	}
+
+	jsonData, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+
+	return jsonData, nil
+}
+
+// parseValue attempts to convert a string value to its appropriate Go type.
+func parseValue(s string) interface{} {
+	// Try parsing as integer
+	if i, err := strconv.ParseInt(s, 10, 64); err == nil {
+		return i
+	}
+
+	// Try parsing as float
+	if f, err := strconv.ParseFloat(s, 64); err == nil {
+		return f
+	}
+
+	// Try parsing as boolean (case-insensitive)
+	lowerS := strings.ToLower(s)
+	if lowerS == "true" {
+		return true
+	}
+	if lowerS == "false" {
+		return false
+	}
+
+	// If none of the above, return as string
+	return s
+}
+
 // downloadAndConvertToJSON 从URL下载CSV数据并转换为JSON
 func DownloadAndConvertToJSON(url string) ([]byte, error) {
 	// 下载并读取数据
@@ -514,7 +580,8 @@ func DownloadAndConvertToJSON(url string) ([]byte, error) {
 	}
 
 	// 转换为JSON
-	jsonData, err := csvToJSON(csvData)
+	// jsonData, err := csvToJSON(csvData)
+	jsonData, err := CSVToJson(csvData)
 	if err != nil {
 		return nil, err
 	}
@@ -522,18 +589,33 @@ func DownloadAndConvertToJSON(url string) ([]byte, error) {
 	return jsonData, nil
 }
 
-// 获取K线行情数据
+// 获取Csv.xz按月行情数据
 func GetCSVMonth(gmcsv string,
-	symbol string, tag string,
+	symbol string,
 	month int, year int,
 	timeoutSeconds int) ([]byte, error) {
 
 	url := fmt.Sprintf("%s/download/", gmcsv)
 
-	// now := time.Now()
-	// year := now.Year()
-	// month := int(now.Month())
 	fpath := getFilePathMonth(symbol, year, month)
+	fmt.Println(fpath)
+
+	resp, err := DownloadAndConvertToJSON(url + fpath)
+	if err != nil {
+		// fmt.Printf("获取数据失败: %s\n", err)
+		return nil, err
+	}
+	return resp, nil
+}
+
+// 获取Csv.xz按年行情数据
+func GetCSVYear(gmcsv string,
+	symbol string, tag string, year int,
+	timeoutSeconds int) ([]byte, error) {
+
+	url := fmt.Sprintf("%s/download/", gmcsv)
+
+	fpath := getFilePathYear(symbol, tag, year)
 	fmt.Println(fpath)
 
 	resp, err := DownloadAndConvertToJSON(url + fpath)

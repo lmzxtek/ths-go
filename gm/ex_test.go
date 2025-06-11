@@ -851,13 +851,19 @@ func TestGetCSV1m(t *testing.T) {
 	// tag := "pe"
 	// year := 2025
 	istime := true
+	isclip := true
+	istime = false
+	// isclip = false
 
-	rsp, err := GetCSV1m(url, symbol, "2025-05-01", "2025-05-31", istime, 10)
+	rsp, err := GetCSV1m(url, symbol, "2025-05-29", "2025-05-29", istime, isclip, 10)
 	if err != nil {
 		fmt.Printf("获取数据失败: %s\n", err)
 	}
+
+	jsonData, _ := json.Marshal(rsp[len(rsp)-5:])
+	fmt.Println(string(jsonData))
 	// fmt.Println(string(rsp))
-	fmt.Println(rsp)
+	// fmt.Println(rsp[:5])
 }
 
 func TestGetKbars(t *testing.T) {

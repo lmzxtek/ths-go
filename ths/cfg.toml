@@ -1,0 +1,28 @@
+# gm-api配置信息
+
+[ths]
+debug    = true
+data_dir = 'data_ths' # 生成结果的子文件夹
+ths_dir  = 'C:/同花顺远航版/bin/users/gfjykldd/function/candle'
+
+gmapi = 'localhost:5000'
+gmcsv = 'localhost:5002'
+
+
+count = 600         # K线数量 
+symbols = [
+    'SHSE.601088',  # 中国神华
+    'SHSE.000001',  # 上证指数
+    'SZSE.001696',  # 宗申动力
+    'SZSE.300917',  # 特发服务
+    'SZSE.000062',  # 深圳华强
+    'SZSE.399006',  # 创业板指
+    'SZSE.399001',  # 深证成指
+    'SHSE.000300',  # 沪深300
+    'SHSE.510880',  # 红利ETF
+    ]
+
+index_list = [
+    'SHSE.000001',  # 上证指数
+    ]
+

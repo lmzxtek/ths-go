@@ -245,7 +245,7 @@ func (sm *StockManager) websocketHandler(w http.ResponseWriter, r *http.Request)
 	// 获取订阅的股票符号
 	symbol := r.URL.Query().Get("symbol")
 	if symbol == "" {
-		symbol = "AAPL" // 默认订阅苹果股票
+		symbol = "SHSE.000001" // 默认订阅上证指数
 	}
 
 	sm.mu.Lock()
@@ -394,8 +394,9 @@ func main() {
 	fmt.Println("  WS   /ws?symbol={symbol} - WebSocket实时数据")
 	fmt.Println()
 	fmt.Println("示例请求:")
-	fmt.Println("  curl http://localhost:8080/api/v1/stocks/AAPL")
-	fmt.Println("  curl http://localhost:8080/api/v1/symbols")
+	fmt.Printf("  curl http://localhost%s/api/v1/stocks/AAPL\n", port)
+	fmt.Printf("  curl http://localhost%s/api/v1/symbols\n", port)
+	// fmt.Println("  curl http://localhost:8080/api/v1/symbols")
 
 	log.Fatal(http.ListenAndServe(port, r))
 }

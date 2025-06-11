@@ -886,9 +886,101 @@ func GetCSVYear(gmcsv string,
 	return result, nil
 }
 
+// filterDataByDate 根据sdate和edate筛选数据，日期列为timestamp
+// 参数:
+//
+//	data: 原始数据，[]map[string]any
+//	dateKey: 数据中表示日期的键名，例如 "timestamp"
+//	sdateStr: 开始日期字符串，例如 "2023-01-01"
+//	edateStr: 结束日期字符串，例如 "2023-12-31"
+//
+// 返回:
+//
+//	筛选后的数据，[]map[string]any
+//	错误信息，如果日期解析失败
+func filterDataByDate(data []map[string]any, dateKey, sdateStr, edateStr string) ([]map[string]any, error) {
+	// 定义日期解析格式 (根据实际情况调整，例如 "2006-01-02 15:04:05" 或 "2006/01/02")
+	const dateFormat = "2006-01-02"
+
+	// 解析开始日期
+	stime, err := time.Parse(dateFormat, sdateStr)
+	if err != nil {
+		return nil, fmt.Errorf("解析开始日期失败: %w", err)
+	}
+	stime = GetDayStart(stime)
+
+	// 解析结束日期
+	etime, err := time.Parse(dateFormat, edateStr)
+	if err != nil {
+		return nil, fmt.Errorf("解析结束日期失败: %w", err)
+	}
+	etime = GetDayEnd(etime)
+
+	var filteredData []map[string]any
+
+	for _, item := range data {
+		timestampVal, ok := item[dateKey]
+		if !ok {
+			// 如果没有日期键，跳过或根据需求处理
+			continue
+		}
+
+		itemTime, parseErr := ParseTimestamp(timestampVal)
+		if parseErr != nil {
+			// 如果解析失败，根据需求跳过或报错
+			fmt.Printf("警告: 无法解析日期字符串 '%s': %v\n", timestampVal, parseErr)
+			continue
+		}
+		// var itemTime time.Time
+		// switch v := timestampVal.(type) {
+		// case int64:
+		// 	// 假设是Unix秒时间戳
+		// 	itemTime = time.Unix(v, 0)
+		// case float64:
+		// 	// 假设是Unix秒时间戳 (可能从JSON解码为float64)
+		// 	itemTime = time.Unix(int64(v), 0)
+		// case string:
+		// 	// 假设是可解析的日期字符串，例如 "2023-01-01T10:00:00Z"
+		// 	// 你需要根据实际字符串格式调整解析方式
+		// 	// parsedTime, parseErr := time.Parse(time.RFC3339, v) // 示例：RFC3339格式
+		// 	parsedTime, parseErr := ParseTimestamp(v)
+		// 	if parseErr != nil {
+		// 		// 如果解析失败，根据需求跳过或报错
+		// 		fmt.Printf("警告: 无法解析日期字符串 '%s': %v\n", v, parseErr)
+		// 		continue
+		// 	}
+		// 	itemTime = parsedTime
+		// // 根据你的实际情况添加其他类型处理，例如 int 或 time.Time 本身
+		// default:
+		// 	fmt.Printf("警告: 未知的时间戳类型 '%T'，跳过此项\n", v)
+		// 	continue
+		// }
+
+		// 比较时间 (只比较日期部分，忽略时间部分)
+		// 为了只比较日期，我们可以将它们都设置为当天的开始时间
+		// itemTime = itemTime.Local().Truncate(24 * time.Hour)
+		// sdateTruncated := stime.Local().Truncate(24 * time.Hour)
+		// edateTruncated := etime.Local().Truncate(24 * time.Hour)
+
+		// 判断是否在范围内
+		if (itemTime.Equal(stime) || itemTime.After(stime)) &&
+			(itemTime.Equal(etime) || itemTime.Before(etime)) {
+			filteredData = append(filteredData, item)
+		}
+		// // 判断是否在范围内
+		// if (itemTime.Equal(sdateTruncated) || itemTime.After(sdateTruncated)) &&
+		// 	(itemTime.Equal(edateTruncated) || itemTime.Before(edateTruncated)) {
+		// 	filteredData = append(filteredData, item)
+		// }
+	}
+
+	return filteredData, nil
+}
+
 // 按日期范围获取1m分时行情数据
 func GetCSV1m(gmcsv string,
-	symbol string, sdate string, edate string, istimestamp bool,
+	symbol string, sdate string, edate string,
+	istimestamp bool, clip bool,
 	timeoutSeconds int) ([]map[string]any, error) {
 
 	// url := fmt.Sprintf("%s/download/", gmcsv)
@@ -971,6 +1063,13 @@ func GetCSV1m(gmcsv string,
 	if len(ddd) == 0 {
 		return nil, fmt.Errorf("没有获取到数据")
 	}
+	if clip {
+		// 过滤数据
+		ddd, err = filterDataByDate(ddd, "timestamp", sday, eday)
+		if err != nil {
+			return nil, fmt.Errorf("过滤数据失败: %w", err)
+		}
+	}
 	return ddd, nil
 }
 
@@ -992,10 +1091,12 @@ func GetGM1m(gmcsv string, gmapi string,
 		return nil, fmt.Errorf("开始日期大于结束日期: sdate=%s, edate=%s", sday, eday)
 	}
 
-	dcsv, _ := GetCSV1m(gmcsv, symbol, sday, eday, istimestamp, timeoutSeconds)
+	isclip := true
+
+	dcsv, _ := GetCSV1m(gmcsv, symbol, sday, eday, istimestamp, isclip, timeoutSeconds)
 	if len(dcsv) > 0 {
 		ddd = append(ddd, dcsv...)
-		fmt.Printf("获取CSV数据成功: %d条: %s - %s\n", len(dcsv), sday, eday)
+		// fmt.Printf("获取CSV数据成功: %d条: %s - %s\n", len(dcsv), sday, eday)
 		// etime, _ := time.Parse("2006-01-02", dcsv[len(dcsv)-1]["timestamp"].(string))
 		etime := ConvertString2Time(dcsv[len(dcsv)-1]["timestamp"].(string))
 		etime = etime.AddDate(0, 0, 1)
@@ -1008,23 +1109,23 @@ func GetGM1m(gmcsv string, gmapi string,
 	}
 
 	dapi, _ := GetKbarsHis(gmapi, symbol, "1m", sday, eday, istimestamp, timeoutSeconds)
-	if dapi != nil {
-		fmt.Printf("获取API数据成功: %d条: %s - %s\n", len(dapi), sday, eday)
-		// 处理一下数据结构，使得CSV数据和API数据合并
-		for i := range dapi {
-			// 去掉API数据中的symbol字段
-			dd1 := make(map[string]any, 6)
+	for i := range dapi {
+		// 去掉API数据中的symbol字段
+		dd1 := make(map[string]any, 6)
 
-			dd1["timestamp"] = dapi[i]["timestamp"]
-			dd1["open"] = dapi[i]["open"]
-			dd1["high"] = dapi[i]["high"]
-			dd1["low"] = dapi[i]["low"]
-			dd1["close"] = dapi[i]["close"]
-			dd1["volume"] = dapi[i]["volume"]
-			ddd = append(ddd, dd1)
-		}
-		// ddd = append(ddd, dapi...)
+		dd1["timestamp"] = dapi[i]["timestamp"]
+		dd1["open"] = dapi[i]["open"]
+		dd1["high"] = dapi[i]["high"]
+		dd1["low"] = dapi[i]["low"]
+		dd1["close"] = dapi[i]["close"]
+		dd1["volume"] = dapi[i]["volume"]
+		ddd = append(ddd, dd1)
 	}
+	// ddd = append(ddd, dapi...)
+	// if dapi != nil {
+	// 	// fmt.Printf("获取API数据成功: %d条: %s - %s\n", len(dapi), sday, eday)
+	// 	// 处理一下数据结构，使得CSV数据和API数据合并
+	// }
 
 	return ddd, nil
 }

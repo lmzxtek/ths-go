@@ -544,7 +544,13 @@ func RouteCSVxz1m(c *gin.Context) {
 		istimestamp = true
 	}
 
-	rawData, err := gm.GetCSV1m(gmcsv, symbol, sdate, edate, istimestamp, timeoutSeconds)
+	clip := c.DefaultQuery("clip", "true")
+	isclip := false
+	if clip == "true" {
+		isclip = true
+	}
+
+	rawData, err := gm.GetCSV1m(gmcsv, symbol, sdate, edate, istimestamp, isclip, timeoutSeconds)
 	if err != nil {
 		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetCSV1m)": err.Error()})
 		return

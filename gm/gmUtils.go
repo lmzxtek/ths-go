@@ -38,6 +38,50 @@ func ConvertString2Time(s string) time.Time {
 	return tt
 }
 
+func GetDayStartAndEnd(t time.Time) (time.Time, time.Time) {
+	// 获取给定时间戳的年、月、日和时区
+	year, month, day := t.Date()
+	location := t.Location()
+
+	// 当天开始时间：将时、分、秒、纳秒设置为0
+	startOfDay := time.Date(year, month, day, 0, 0, 0, 0, location)
+
+	// 当天结束时间：将时、分、秒、纳秒设置为23:59:59.999999999
+	// 更简洁的方式是获取下一天的开始时间，然后减去1纳秒
+	endOfDay := time.Date(year, month, day, 23, 59, 59, 999999999, location)
+	// 或者
+	// nextDayStart := startOfDay.AddDate(0, 0, 1)
+	// endOfDay := nextDayStart.Add(-time.Nanosecond)
+
+	return startOfDay, endOfDay
+}
+
+func GetDayStart(t time.Time) time.Time {
+	// 获取给定时间戳的年、月、日和时区
+	year, month, day := t.Date()
+	location := t.Location()
+
+	// 当天开始时间：将时、分、秒、纳秒设置为0
+	startOfDay := time.Date(year, month, day, 0, 0, 0, 0, location)
+
+	return startOfDay
+}
+
+func GetDayEnd(t time.Time) time.Time {
+	// 获取给定时间戳的年、月、日和时区
+	year, month, day := t.Date()
+	location := t.Location()
+
+	// 当天结束时间：将时、分、秒、纳秒设置为23:59:59.999999999
+	// 更简洁的方式是获取下一天的开始时间，然后减去1纳秒
+	endOfDay := time.Date(year, month, day, 23, 59, 59, 999999999, location)
+	// 或者
+	// nextDayStart := startOfDay.AddDate(0, 0, 1)
+	// endOfDay := nextDayStart.Add(-time.Nanosecond)
+
+	return endOfDay
+}
+
 // ParseTimestamp 解析各种格式的时间戳
 func ParseTimestamp(ts any) (time.Time, error) {
 	switch v := ts.(type) {

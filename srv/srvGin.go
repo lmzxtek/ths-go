@@ -25,8 +25,12 @@ func init() {
 }
 
 func SetURL(gmAPI, gmCSV string) {
-	gmapi = SmartURLHandler(gmAPI, false)
-	gmcsv = SmartURLHandler(gmCSV, false)
+	if gmAPI != "" {
+		gmapi = SmartURLHandler(gmAPI, false)
+	}
+	if gmCSV != "" {
+		gmcsv = SmartURLHandler(gmCSV, false)
+	}
 }
 
 // RandomStock 从预定义的股票代码数组中随机返回一个元素
@@ -349,6 +353,67 @@ func RouteKbars(c *gin.Context) {
 	// c.JSON(http.StatusOK, records)
 }
 
+// 获取股票当日的 K 线数据，返回字典json格式，键为代码，值为K线数据
+func RouteKBDict(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", today)
+	edate := c.DefaultQuery("edate", today)
+	tag := c.DefaultQuery("tag", "1m")
+	timestamp := c.DefaultQuery("timestamp", "false")
+	timeoutSeconds := 10
+
+	istimestamp := false
+	if timestamp == "true" {
+		istimestamp = true
+	}
+
+	rawData, err := gm.GetKbarsHis(gmapi, symbols, tag, sdate, edate, istimestamp, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetKbarsHis)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gm.ConvertRecords2Dict(rawData))
+}
+
+// 获取股票当日的 K 线数据，返回字典json格式，键为代码，值为K线数据
+func RouteKBDictTS(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", today)
+	edate := c.DefaultQuery("edate", today)
+	tag := c.DefaultQuery("tag", "1m")
+	timestamp := c.DefaultQuery("timestamp", "false")
+	timeoutSeconds := 10
+
+	istimestamp := false
+	if timestamp == "true" {
+		istimestamp = true
+	}
+
+	rawData, err := gm.GetKbarsHis(gmapi, symbols, tag, sdate, edate, istimestamp, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetKbarsHis)": err.Error()})
+		return
+	}
+	if istimestamp {
+		c.JSON(http.StatusOK, gm.ConvertRecords2DictTSInt(rawData))
+	} else {
+		c.JSON(http.StatusOK, gm.ConvertRecords2DictTSString(rawData))
+	}
+	// c.JSON(http.StatusOK, gm.ConvertRecords2DictTSString(rawData))
+}
+
 func RouteKbarsN(c *gin.Context) {
 	symbol := c.DefaultQuery("symbol", "")
 	if symbol == "" {
@@ -493,4 +558,44 @@ func RouteCSVxz1m(c *gin.Context) {
 	// }
 
 	// c.JSON(http.StatusOK, string(jsonData))
+}
+
+func RouteGM1m(c *gin.Context) {
+	symbol := c.DefaultQuery("symbol", "")
+	if symbol == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须参数"))
+		return
+	}
+
+	timeoutSeconds := 10
+	now := time.Now()
+	today := now.Format("2006-01-02")
+	prday := now.AddDate(0, 0, -1)
+	yesterday := prday.Format("2006-01-02")
+
+	// tag := c.DefaultQuery("tag", "1m")
+
+	timestamp := c.DefaultQuery("timestamp", "false")
+	istimestamp := false
+	if timestamp == "true" {
+		istimestamp = true
+	}
+	include := c.DefaultQuery("include", "true")
+	isinclude := true
+	if include == "false" {
+		isinclude = false
+	}
+	cday := yesterday
+	if isinclude && gm.IsAOpen() {
+		cday = today
+	}
+	sdate := c.DefaultQuery("sdate", cday)
+	edate := c.DefaultQuery("edate", cday)
+
+	rawData, err := gm.GetGM1m(gmcsv, gmapi, symbol, sdate, edate, istimestamp, isinclude, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetGM1m)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
 }

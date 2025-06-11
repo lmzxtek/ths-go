@@ -3,6 +3,7 @@ package gm
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -35,6 +36,60 @@ func ConvertString2Time(s string) time.Time {
 
 	// fmt.Println("=" + strings.Repeat("=", 50))
 	return tt
+}
+
+// ParseTimestamp 解析各种格式的时间戳
+func ParseTimestamp(ts any) (time.Time, error) {
+	switch v := ts.(type) {
+	case string:
+		// 尝试不同的字符串时间格式
+		formats := []string{
+			time.RFC3339,          // "2006-01-02T15:04:05Z07:00"
+			"2006-01-02 15:04:05", // "2006-01-02 15:04:05"
+			"2006-01-02T15:04:05", // "2006-01-02T15:04:05"
+			"2006-01-02",          // "2006-01-02"
+			"01/02/2006 15:04:05", // "01/02/2006 15:04:05"
+			"01/02/2006",          // "01/02/2006"
+		}
+
+		for _, format := range formats {
+			if t, err := time.Parse(format, v); err == nil {
+				return t, nil
+			}
+		}
+
+		// 尝试解析为Unix时间戳字符串
+		if unixTime, err := strconv.ParseInt(v, 10, 64); err == nil {
+			// 判断是秒还是毫秒
+			if unixTime > 1e12 { // 毫秒
+				return time.Unix(0, unixTime*int64(time.Millisecond)), nil
+			} else { // 秒
+				return time.Unix(unixTime, 0), nil
+			}
+		}
+
+		return time.Time{}, fmt.Errorf("无法解析时间字符串: %s", v)
+
+	case float64:
+		// 数字时间戳
+		unixTime := int64(v)
+		if unixTime > 1e12 { // 毫秒
+			return time.Unix(0, unixTime*int64(time.Millisecond)), nil
+		} else { // 秒
+			return time.Unix(unixTime, 0), nil
+		}
+
+	case int64:
+		// 整数时间戳
+		if v > 1e12 { // 毫秒
+			return time.Unix(0, v*int64(time.Millisecond)), nil
+		} else { // 秒
+			return time.Unix(v, 0), nil
+		}
+
+	default:
+		return time.Time{}, fmt.Errorf("不支持的时间戳类型: %T", ts)
+	}
 }
 
 // TimeStringToTimestamp 将时间字符串转换为Unix时间戳（秒）
@@ -191,6 +246,46 @@ func IsChineseStockMarketOpen() bool {
 	now := time.Now().In(chinaLocation)
 
 	return IsChineseStockMarketOpenAt(now)
+}
+
+// 判断当前时间是否开盘
+func IsAOpen() bool {
+	// 获取当前中国时间
+	chinaLocation, _ := time.LoadLocation("Asia/Shanghai")
+	now := time.Now().In(chinaLocation)
+	// 检查是否为工作日（周一到周五）
+	weekday := now.Weekday()
+	if weekday == time.Saturday || weekday == time.Sunday {
+		return false
+	}
+
+	hour := now.Hour()
+	minute := now.Minute()
+	currentTime := hour*100 + minute // 转换为HHMM格式便于比较
+	// 上午交易时间：9:30-11:30
+	morningStart := 930 // 9:30
+
+	return currentTime >= morningStart
+}
+
+// 判断当前时间是否开盘
+func IsAClose() bool {
+	// 获取当前中国时间
+	chinaLocation, _ := time.LoadLocation("Asia/Shanghai")
+	now := time.Now().In(chinaLocation)
+	// 检查是否为工作日（周一到周五）
+	weekday := now.Weekday()
+	if weekday == time.Saturday || weekday == time.Sunday {
+		return false
+	}
+
+	hour := now.Hour()
+	minute := now.Minute()
+	currentTime := hour*100 + minute // 转换为HHMM格式便于比较
+	// 下午收盘时间：15:00
+	afternoonEnd := 1500 // 9:30
+
+	return currentTime >= afternoonEnd
 }
 
 // IsChineseStockMarketOpenAt 判断指定时间是否为中国股市开市时间

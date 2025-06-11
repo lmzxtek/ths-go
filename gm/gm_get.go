@@ -388,6 +388,103 @@ func GetCurrent(gmapi string, symbols string, timeoutSeconds int, split bool) ([
 	return data, nil
 }
 
+func ConvertEob2Timestamp(records []map[string]any, istimestamp bool) []map[string]any {
+	// res := make([]map[string]any, len(records))
+	var res []map[string]any
+	for i := range records {
+		dd1 := make(map[string]any, len(records[i]))
+		for k, v := range records[i] {
+			if k == "timestamp" || k == "eob" {
+				key := "timestamp"
+				// tstr := fmt.Sprintf("%s", records[i]["eob"])
+				tstr := v.(string)
+				tstr = strings.TrimSpace(tstr)
+				tstr = strings.TrimSuffix(tstr, "+08:00")
+				tstr = strings.Replace(tstr, "T", " ", 1)
+				if istimestamp {
+					t, _ := time.Parse("2006-01-02 15:04:05", tstr)
+					dd1[key] = t.UnixMilli()
+				} else {
+					dd1[key] = tstr
+				}
+			} else {
+				dd1[k] = v
+			}
+		}
+		res = append(res, dd1)
+	}
+	return res
+}
+
+// 把原始数据转换为字典数据
+func ConvertRecords2Dict(records []map[string]any) map[string]any {
+	res := make(map[string]any)
+	// var res map[string]any
+	for i := range records {
+		symbol := records[i]["symbol"].(string)
+		dd1 := make(map[string]any, len(records[i])-1)
+		for k, v := range records[i] {
+			if k == "symbol" {
+				continue
+			}
+			dd1[k] = v
+		}
+		if _, ok := res[symbol]; !ok {
+			res[symbol] = []map[string]any{dd1}
+		} else {
+			res[symbol] = append(res[symbol].([]map[string]any), dd1)
+		}
+		// res[symbol] = append(dd1)
+	}
+	return res
+}
+
+// 把原始数据转换为字典数据
+func ConvertRecords2DictTSString(records []map[string]any) map[string]map[string]any {
+	res := make(map[string]map[string]any)
+	// res := make(map[string]any)
+	// var res map[string]any
+	for i := range records {
+		symbol := records[i]["symbol"].(string)
+		timestamp := records[i]["timestamp"]
+		if res[symbol] == nil {
+			res[symbol] = make(map[string]any)
+		}
+		dd1 := make(map[string]any)
+		for k, v := range records[i] {
+			if k == "symbol" || k == "timestamp" {
+				continue
+			}
+			dd1[k] = v
+		}
+		res[symbol][timestamp.(string)] = dd1
+	}
+	return res
+}
+
+// 把原始数据转换为字典数据
+func ConvertRecords2DictTSInt(records []map[string]any) map[string]map[int64]any {
+	res := make(map[string]map[int64]any)
+	// res := make(map[string]any)
+	// var res map[string]any
+	for i := range records {
+		symbol := records[i]["symbol"].(string)
+		timestamp := records[i]["timestamp"].(int64)
+		if res[symbol] == nil {
+			res[symbol] = make(map[int64]any)
+		}
+		dd1 := make(map[string]any)
+		for k, v := range records[i] {
+			if k == "symbol" || k == "timestamp" {
+				continue
+			}
+			dd1[k] = v
+		}
+		res[symbol][timestamp] = dd1
+	}
+	return res
+}
+
 // 获取K线行情数据
 func GetKbarsHisByte(gmapi string,
 	symbols string, tag string,
@@ -427,12 +524,12 @@ func GetKbarsHis(gmapi string,
 		return nil, fmt.Errorf("解析 JSON 数据失败(GetKbarsHisByte()): %v", unmarshalErr)
 	}
 
-	records, transformErr := rcd.ToRecords(istimestamp)
+	records, transformErr := rcd.ToRecords()
 	if transformErr != nil {
 		return nil, fmt.Errorf("转换数据失败(GetKbarsHisByte()): %v", transformErr)
 	}
 
-	return records, nil
+	return ConvertEob2Timestamp(records, istimestamp), nil
 }
 
 // 获取K线行情数据
@@ -476,12 +573,12 @@ func GetKbarsHisN(gmapi string,
 		return nil, fmt.Errorf("解析 JSON 数据失败(GetKbarsHisN()): %v", unmarshalErr)
 	}
 
-	records, transformErr := rcd.ToRecords(istimestamp)
+	records, transformErr := rcd.ToRecords()
 	if transformErr != nil {
 		return nil, fmt.Errorf("转换数据失败(GetKbarsHisN()): %v", transformErr)
 	}
 
-	return records, nil
+	return ConvertEob2Timestamp(records, istimestamp), nil
 }
 
 func getFilePathYear(symbol string, tag string, year int) string {
@@ -869,6 +966,64 @@ func GetCSV1m(gmcsv string,
 				ddd = append(ddd, rsp...)
 			}
 		}
+	}
+
+	if len(ddd) == 0 {
+		return nil, fmt.Errorf("没有获取到数据")
+	}
+	return ddd, nil
+}
+
+// 按日期范围获取1m分时行情数据
+func GetGM1m(gmcsv string, gmapi string,
+	symbol string, sdate string, edate string, istimestamp bool, include bool,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	var ddd []map[string]any
+
+	sday := sdate
+	eday := edate
+	if !include {
+		etime, _ := time.Parse("2006-01-02", eday)
+		etime = etime.AddDate(0, 0, -1)
+		eday = etime.Format("2006-01-02")
+	}
+	if sday > eday {
+		return nil, fmt.Errorf("开始日期大于结束日期: sdate=%s, edate=%s", sday, eday)
+	}
+
+	dcsv, _ := GetCSV1m(gmcsv, symbol, sday, eday, istimestamp, timeoutSeconds)
+	if len(dcsv) > 0 {
+		ddd = append(ddd, dcsv...)
+		fmt.Printf("获取CSV数据成功: %d条: %s - %s\n", len(dcsv), sday, eday)
+		// etime, _ := time.Parse("2006-01-02", dcsv[len(dcsv)-1]["timestamp"].(string))
+		etime := ConvertString2Time(dcsv[len(dcsv)-1]["timestamp"].(string))
+		etime = etime.AddDate(0, 0, 1)
+		sday = etime.Format("2006-01-02") // 开始时间设置为下一天
+		// fmt.Printf(" 下个开始日期: %s \n", sday)
+	}
+
+	if sday > eday {
+		return ddd, nil
+	}
+
+	dapi, _ := GetKbarsHis(gmapi, symbol, "1m", sday, eday, istimestamp, timeoutSeconds)
+	if dapi != nil {
+		fmt.Printf("获取API数据成功: %d条: %s - %s\n", len(dapi), sday, eday)
+		// 处理一下数据结构，使得CSV数据和API数据合并
+		for i := range dapi {
+			// 去掉API数据中的symbol字段
+			dd1 := make(map[string]any, 6)
+
+			dd1["timestamp"] = dapi[i]["timestamp"]
+			dd1["open"] = dapi[i]["open"]
+			dd1["high"] = dapi[i]["high"]
+			dd1["low"] = dapi[i]["low"]
+			dd1["close"] = dapi[i]["close"]
+			dd1["volume"] = dapi[i]["volume"]
+			ddd = append(ddd, dd1)
+		}
+		// ddd = append(ddd, dapi...)
 	}
 
 	return ddd, nil

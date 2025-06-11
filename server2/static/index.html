@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票行情实时查看</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/klinecharts/dist/klinecharts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #434448 0%, #79757e 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .symbol-select {
+            padding: 10px 15px;
+            border: 2px solid #667eea;
+            border-radius: 25px;
+            background: white;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        
+        .symbol-select:focus {
+            border-color: #764ba2;
+            box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.1);
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        
+        .status.connected {
+            background: rgba(34, 197, 94, 0.1);
+            color: #16a34a;
+        }
+        
+        .status.disconnected {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .status.connected .status-dot {
+            background: #16a34a;
+        }
+        
+        .status.disconnected .status-dot {
+            background: #dc2626;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .chart-container {
+            background: rgba(160, 158, 158, 0.352);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        
+        .chart-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .last-update {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        #chart {
+            width: 100%;
+            height: 500px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .stat-value.positive {
+            color: #16a34a;
+        }
+        
+        .stat-value.negative {
+            color: #dc2626;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>📈 股票行情实时监控</h1>
+                <div class="controls">
+                    <select v-model="selectedSymbol" @change="changeSymbol" class="symbol-select">
+                        <option value="AAPL">苹果 (AAPL)</option>
+                        <option value="GOOGL">谷歌 (GOOGL)</option>
+                        <option value="MSFT">微软 (MSFT)</option>
+                        <option value="TSLA">特斯拉 (TSLA)</option>
+                        <option value="AMZN">亚马逊 (AMZN)</option>
+                    </select>
+                    <div :class="['status', isConnected ? 'connected' : 'disconnected']">
+                        <div class="status-dot"></div>
+                        {{ isConnected ? '已连接' : '未连接' }}
+                    </div>
+                </div>
+            </div>
+            
+            <div v-if="error" class="error">
+                {{ error }}
+            </div>
+            
+            <div v-if="currentStock" class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">当前价格</div>
+                    <div class="stat-value">${{ currentStock.close.toFixed(2) }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">涨跌幅</div>
+                    <div :class="['stat-value', priceChange >= 0 ? 'positive' : 'negative']">
+                        {{ priceChange >= 0 ? '+' : '' }}{{ priceChange.toFixed(2) }}%
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">最高价</div>
+                    <div class="stat-value">${{ currentStock.high.toFixed(2) }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">最低价</div>
+                    <div class="stat-value">${{ currentStock.low.toFixed(2) }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">成交量</div>
+                    <div class="stat-value">{{ formatVolume(currentStock.volume) }}</div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-header">
+                    <div class="chart-title">{{ selectedSymbol }} K线图</div>
+                    <div class="last-update">最后更新: {{ lastUpdate }}</div>
+                </div>
+                <div v-if="loading" class="loading">
+                    <div class="spinner"></div>
+                    <div>加载中...</div>
+                </div>
+                <div id="chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, onUnmounted, computed, watch } = Vue;
+        
+        createApp({
+            setup() {
+                const selectedSymbol = ref('AAPL');
+                const chartData = ref([]);
+                const currentStock = ref(null);
+                const loading = ref(true);
+                const error = ref('');
+                const isConnected = ref(false);
+                const lastUpdate = ref('');
+                let chart = null;
+                let updateInterval = null;
+                
+                const priceChange = computed(() => {
+                    if (!currentStock.value || chartData.value.length < 2) return 0;
+                    const current = currentStock.value.close;
+                    const previous = chartData.value[chartData.value.length - 2]?.close || current;
+                    return ((current - previous) / previous) * 100;
+                });
+                
+                // 初始化图表
+                const initChart = () => {
+                    const chartElement = document.getElementById('chart');
+                    if (chartElement && !chart) {
+                        chart = klinecharts.init(chartElement);
+                        
+                        // 设置图表样式
+                        chart.setStyleOptions({
+                            grid: {
+                                show: true,
+                                horizontal: {
+                                    show: true,
+                                    color: '#E9EEF3',
+                                    style: 'dashed'
+                                },
+                                vertical: {
+                                    show: true,
+                                    color: '#E9EEF3',
+                                    style: 'dashed'
+                                }
+                            },
+                            candle: {
+                                priceMark: {
+                                    show: true,
+                                    high: {
+                                        color: '#16a34a'
+                                    },
+                                    low: {
+                                        color: '#dc2626'
+                                    }
+                                },
+                                tooltip: {
+                                    showRule: 'always',
+                                    labels: ['开盘', '收盘', '最高', '最低', '成交量']
+                                }
+                            },
+                            xAxis: {
+                                show: true,
+                                tickText: {
+                                    color: '#666'
+                                }
+                            },
+                            yAxis: {
+                                show: true,
+                                tickText: {
+                                    color: '#666'
+                                }
+                            }
+                        });
+                    }
+                };
+                
+                // 生成模拟数据
+                const generateMockData = (symbol, count = 100) => {
+                    const data = [];
+                    let basePrice = 150;
+                    
+                    // 根据股票符号设置不同的基础价格
+                    switch (symbol) {
+                        case 'AAPL': basePrice = 150; break;
+                        case 'GOOGL': basePrice = 2800; break;
+                        case 'MSFT': basePrice = 330; break;
+                        case 'TSLA': basePrice = 200; break;
+                        case 'AMZN': basePrice = 3200; break;
+                    }
+                    
+                    const now = new Date();
+                    
+                    for (let i = count; i >= 0; i--) {
+                        const timestamp = new Date(now.getTime() - i * 60000); // 每分钟一个数据点
+                        
+                        // 生成随机价格变动
+                        const change = (Math.random() - 0.5) * basePrice * 0.02;
+                        basePrice = Math.max(basePrice + change, basePrice * 0.9);
+                        
+                        const open = basePrice;
+                        const high = open + Math.random() * open * 0.01;
+                        const low = open - Math.random() * open * 0.01;
+                        const close = low + Math.random() * (high - low);
+                        const volume = Math.floor(Math.random() * 1000000) + 100000;
+                        
+                        data.push({
+                            timestamp: timestamp.getTime(),
+                            open: parseFloat(open.toFixed(2)),
+                            high: parseFloat(high.toFixed(2)),
+                            low: parseFloat(low.toFixed(2)),
+                            close: parseFloat(close.toFixed(2)),
+                            volume: volume
+                        });
+                        
+                        basePrice = close;
+                    }
+                    
+                    return data;
+                };
+                
+                // WebSocket相关
+                let ws = null;
+                const API_BASE = 'http://localhost:8080/api/v1';
+                const WS_BASE = 'ws://localhost:8080/ws';
+                
+                // 获取股票数据
+                const fetchStockData = async () => {
+                    try {
+                        loading.value = true;
+                        error.value = '';
+                        
+                        // 从后端API获取历史数据
+                        const response = await fetch(`${API_BASE}/stocks/${selectedSymbol.value}?limit=100`);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const result = await response.json();
+                        chartData.value = result.data;
+                        currentStock.value = result.data[result.data.length - 1];
+                        isConnected.value = true;
+                        lastUpdate.value = new Date().toLocaleString('zh-CN');
+                        
+                        // 更新图表
+                        if (chart) {
+                            chart.applyNewData(result.data.map(item => ({
+                                timestamp: item.timestamp,
+                                open: item.open,
+                                high: item.high,
+                                low: item.low,
+                                close: item.close,
+                                volume: item.volume
+                            })));
+                        }
+                        
+                        // 建立WebSocket连接
+                        connectWebSocket();
+                        
+                    } catch (err) {
+                        console.error('获取数据失败:', err);
+                        error.value = '获取数据失败，使用模拟数据: ' + err.message;
+                        
+                        // 回退到模拟数据
+                        const data = generateMockData(selectedSymbol.value);
+                        chartData.value = data;
+                        currentStock.value = data[data.length - 1];
+                        isConnected.value = false;
+                        lastUpdate.value = new Date().toLocaleString('zh-CN');
+                        
+                        if (chart) {
+                            chart.applyNewData(data.map(item => ({
+                                timestamp: item.timestamp,
+                                open: item.open,
+                                high: item.high,
+                                low: item.low,
+                                close: item.close,
+                                volume: item.volume
+                            })));
+                        }
+                        
+                        // 启动模拟更新
+                        startRealTimeUpdate();
+                        
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                // 连接WebSocket
+                const connectWebSocket = () => {
+                    // 关闭现有连接
+                    if (ws) {
+                        ws.close();
+                    }
+                    
+                    try {
+                        ws = new WebSocket(`${WS_BASE}?symbol=${selectedSymbol.value}`);
+                        
+                        ws.onopen = () => {
+                            console.log('WebSocket连接已建立');
+                            isConnected.value = true;
+                            error.value = '';
+                        };
+                        
+                        ws.onmessage = (event) => {
+                            const message = JSON.parse(event.data);
+                            if (message.type === 'update' || message.type === 'initial') {
+                                const newData = message.data;
+                                
+                                // 更新当前股票数据
+                                currentStock.value = newData;
+                                lastUpdate.value = new Date().toLocaleString('zh-CN');
+                                
+                                if (message.type === 'update') {
+                                    // 添加新数据到图表
+                                    chartData.value.push(newData);
+                                    
+                                    // 保持最多200个数据点
+                                    if (chartData.value.length > 200) {
+                                        chartData.value.shift();
+                                    }
+                                    
+                                    // 更新图表
+                                    if (chart) {
+                                        chart.updateData(newData);
+                                    }
+                                }
+                            }
+                        };
+                        
+                        ws.onerror = (error) => {
+                            console.error('WebSocket错误:', error);
+                            isConnected.value = false;
+                            error.value = 'WebSocket连接错误，使用模拟数据';
+                            
+                            // 回退到模拟更新
+                            startRealTimeUpdate();
+                        };
+                        
+                        ws.onclose = () => {
+                            console.log('WebSocket连接已关闭');
+                            isConnected.value = false;
+                            
+                            // 尝试重连
+                            setTimeout(() => {
+                                if (selectedSymbol.value) {
+                                    connectWebSocket();
+                                }
+                            }, 5000);
+                        };
+                        
+                    } catch (err) {
+                        console.error('WebSocket连接失败:', err);
+                        isConnected.value = false;
+                        error.value = 'WebSocket连接失败，使用模拟数据';
+                        startRealTimeUpdate();
+                    }
+                };
+                
+                // 更新实时数据
+                const updateRealTimeData = () => {
+                    if (chartData.value.length === 0) return;
+                    
+                    const lastData = chartData.value[chartData.value.length - 1];
+                    const now = new Date();
+                    
+                    // 生成新的数据点
+                    const change = (Math.random() - 0.5) * lastData.close * 0.01;
+                    const newPrice = Math.max(lastData.close + change, lastData.close * 0.99);
+                    
+                    const newData = {
+                        timestamp: now.getTime(),
+                        open: lastData.close,
+                        high: Math.max(lastData.close, newPrice),
+                        low: Math.min(lastData.close, newPrice),
+                        close: parseFloat(newPrice.toFixed(2)),
+                        volume: Math.floor(Math.random() * 500000) + 50000
+                    };
+                    
+                    // 更新数据
+                    chartData.value.push(newData);
+                    currentStock.value = newData;
+                    lastUpdate.value = new Date().toLocaleString('zh-CN');
+                    
+                    // 保持最多200个数据点
+                    if (chartData.value.length > 200) {
+                        chartData.value.shift();
+                    }
+                    
+                    // 更新图表
+                    if (chart) {
+                        chart.updateData(newData);
+                    }
+                };
+                
+                // 切换股票
+                const changeSymbol = () => {
+                    // 停止当前的模拟更新
+                    stopRealTimeUpdate();
+                    
+                    // 通知WebSocket切换股票
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ symbol: selectedSymbol.value }));
+                    }
+                    
+                    // 重新获取数据
+                    fetchStockData();
+                };
+                
+                // 格式化交易量
+                const formatVolume = (volume) => {
+                    if (volume >= 1000000) {
+                        return (volume / 1000000).toFixed(1) + 'M';
+                    } else if (volume >= 1000) {
+                        return (volume / 1000).toFixed(1) + 'K';
+                    }
+                    return volume.toString();
+                };
+                
+                // 启动定时更新
+                const startRealTimeUpdate = () => {
+                    if (updateInterval) {
+                        clearInterval(updateInterval);
+                    }
+                    updateInterval = setInterval(updateRealTimeData, 10000); // 每10秒更新
+                };
+                
+                // 停止定时更新
+                const stopRealTimeUpdate = () => {
+                    if (updateInterval) {
+                        clearInterval(updateInterval);
+                        updateInterval = null;
+                    }
+                };
+                
+                // 组件挂载
+                onMounted(() => {
+                    initChart();
+                    fetchStockData();
+                    startRealTimeUpdate();
+                });
+                
+                // 组件卸载
+                onUnmounted(() => {
+                    stopRealTimeUpdate();
+                    if (ws) {
+                        ws.close();
+                    }
+                    if (chart) {
+                        chart.destroy();
+                    }
+                });
+                
+                return {
+                    selectedSymbol,
+                    chartData,
+                    currentStock,
+                    loading,
+                    error,
+                    isConnected,
+                    lastUpdate,
+                    priceChange,
+                    changeSymbol,
+                    formatVolume
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

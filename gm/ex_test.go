@@ -257,6 +257,50 @@ func TestMarketOpenTime(t *testing.T) {
 	}
 }
 
+func TestTickRecord(t *testing.T) {
+	// 创建示例分时数据
+	now := time.Now()
+	records := []TickRecord{
+		{Timestamp: now.Add(-2 * 24 * time.Hour), Price: 100.0, Volume: 1000},
+		{Timestamp: now.Add(-2*24*time.Hour + time.Hour), Price: 101.5, Volume: 1500},
+		{Timestamp: now.Add(-2*24*time.Hour + 2*time.Hour), Price: 99.8, Volume: 800},
+		{Timestamp: now.Add(-2*24*time.Hour + 3*time.Hour), Price: 102.0, Volume: 1200},
+
+		{Timestamp: now.Add(-24 * time.Hour), Price: 102.5, Volume: 900},
+		{Timestamp: now.Add(-24*time.Hour + time.Hour), Price: 103.0, Volume: 1100},
+		{Timestamp: now.Add(-24*time.Hour + 2*time.Hour), Price: 101.0, Volume: 700},
+		{Timestamp: now.Add(-24*time.Hour + 3*time.Hour), Price: 104.0, Volume: 1300},
+
+		{Timestamp: now, Price: 104.5, Volume: 1000},
+		{Timestamp: now.Add(time.Hour), Price: 105.0, Volume: 1400},
+		{Timestamp: now.Add(2 * time.Hour), Price: 103.5, Volume: 600},
+		{Timestamp: now.Add(3 * time.Hour), Price: 106.0, Volume: 1600},
+	}
+
+	// 转换为日K线
+	dailyKLines, err := ConvertTicksToDailyWithValidation(records)
+	if err != nil {
+		fmt.Printf("转换失败: %v\n", err)
+		return
+	}
+
+	// 输出结果
+	fmt.Println("日K线数据:")
+	fmt.Printf("%-12s %-8s %-8s %-8s %-8s %-8s\n", "日期", "开盘", "最高", "最低", "收盘", "成交量")
+	fmt.Println(strings.Repeat("-", 60))
+
+	for _, kline := range dailyKLines {
+		fmt.Printf("%-12s %-8.2f %-8.2f %-8.2f %-8.2f %-8d\n",
+			kline.Date.Format("2006-01-02"),
+			kline.Open,
+			kline.High,
+			kline.Low,
+			kline.Close,
+			kline.Volume,
+		)
+	}
+}
+
 func TestKBarType(t *testing.T) {
 	fmt.Println(" -=> Start test KBar type ... ")
 
@@ -286,6 +330,250 @@ func TestKBarType(t *testing.T) {
 	fmt.Println(kb.ToList(now.Unix()))
 	fmt.Println(kb.ToList(tt.UnixMilli()))
 	fmt.Println(kb.ToRecords(now.UnixMilli()))
+}
+
+func TestKBData(t *testing.T) {
+	// 示例1: 单个K线数据（字符串时间戳）
+	jsonStr1 := `{
+		"timestamp": "2025-06-11T09:30:00+08:00",
+		"open": 100.5,
+		"high": 102.0,
+		"low": 99.8,
+		"close": 101.2,
+		"volume": 50000
+	}`
+
+	kbar1, err := ParseKBarFromJSON(jsonStr1)
+	if err != nil {
+		fmt.Printf("解析失败: %v\n", err)
+	} else {
+		fmt.Printf("K线1: %+v\n", kbar1)
+	}
+
+	// 示例2: K线数组（Unix时间戳）
+	jsonStr2 := `[
+		{
+			"timestamp": 1704067800,
+			"open": 100.5,
+			"high": 102.0,
+			"low": 99.8,
+			"close": 101.2,
+			"volume": 50000
+		},
+		{
+			"timestamp": 1704154200,
+			"open": 101.2,
+			"high": 103.5,
+			"low": 100.9,
+			"close": 102.8,
+			"volume": 60000
+		}
+	]`
+
+	kbars2, err := ParseKBarArrayFromJSON(jsonStr2)
+	if err != nil {
+		fmt.Printf("解析数组失败: %v\n", err)
+	} else {
+		fmt.Println("\nK线数组:")
+		for i, kbar := range kbars2 {
+			fmt.Printf("K线%d: 时间=%s, 开盘=%.2f, 最高=%.2f, 最低=%.2f, 收盘=%.2f, 成交量=%d\n",
+				i+1, kbar.Timestamp.Format("2006-01-02 15:04:05"),
+				kbar.Open, kbar.High, kbar.Low, kbar.Close, kbar.Volume)
+		}
+	}
+
+	// 示例3: API响应格式
+	apiJsonStr := `{
+		"code": 0,
+		"message": "success",
+		"data": [
+			{
+				"timestamp": "2024-01-01 09:30:00",
+				"open": 100.5,
+				"high": 102.0,
+				"low": 99.8,
+				"close": 101.2,
+				"volume": 50000
+			}
+		]
+	}`
+
+	kbars3, err := ParseKBarFromAPIResponse(apiJsonStr)
+	if err != nil {
+		fmt.Printf("解析API响应失败: %v\n", err)
+	} else {
+		fmt.Println("\nAPI响应K线数据:")
+		for _, kbar := range kbars3 {
+			fmt.Printf("时间=%s, OHLCV=(%.2f,%.2f,%.2f,%.2f,%d)\n",
+				kbar.Timestamp.Format("2006-01-02 15:04:05"),
+				kbar.Open, kbar.High, kbar.Low, kbar.Close, kbar.Volume)
+		}
+	}
+
+	// 示例4: 毫秒时间戳
+	jsonStr4 := `{
+		"timestamp": 1704067800000,
+		"open": 100.5,
+		"high": 102.0,
+		"low": 99.8,
+		"close": 101.2,
+		"volume": 50000
+	}`
+
+	kbar4, err := ParseKBarFromJSON(jsonStr4)
+	if err != nil {
+		fmt.Printf("解析毫秒时间戳失败: %v\n", err)
+	} else {
+		fmt.Printf("\n毫秒时间戳K线: 时间=%s\n", kbar4.Timestamp.Format("2006-01-02 15:04:05"))
+	}
+
+	// 批量处理示例
+	fmt.Println("\n=== 批量处理示例 ===")
+	jsonStrings := []string{
+		`{"timestamp": "2024-01-01T09:30:00", "open": 100, "high": 101, "low": 99, "close": 100.5, "volume": 1000}`,
+		`{"timestamp": 1704067800, "open": 100.5, "high": 102, "low": 99.5, "close": 101, "volume": 1500}`,
+		`{"timestamp": "2024-01-01 10:30:00", "open": 101, "high": 103, "low": 100, "close": 102, "volume": 2000}`,
+	}
+
+	for i, jsonStr := range jsonStrings {
+		if kbar, err := ParseKBarFromJSON(jsonStr); err != nil {
+			fmt.Printf("批量处理%d失败: %v\n", i+1, err)
+		} else {
+			fmt.Printf("批量%d: %s -> OHLC(%.1f,%.1f,%.1f,%.1f)\n",
+				i+1, kbar.Timestamp.Format("15:04:05"),
+				kbar.Open, kbar.High, kbar.Low, kbar.Close)
+		}
+	}
+}
+
+func TestOHLCV(t *testing.T) {
+	// 创建示例数据
+	now := time.Now()
+	kbars := []KBarData{
+		{
+			Timestamp: now.Add(-2 * time.Hour),
+			Open:      100.5,
+			High:      102.0,
+			Low:       99.8,
+			Close:     101.2,
+			Volume:    50000,
+		},
+		{
+			Timestamp: now.Add(-1 * time.Hour),
+			Open:      101.2,
+			High:      103.5,
+			Low:       100.9,
+			Close:     102.8,
+			Volume:    60000,
+		},
+		{
+			Timestamp: now,
+			Open:      102.8,
+			High:      104.0,
+			Low:       102.0,
+			Close:     103.5,
+			Volume:    70000,
+		},
+	}
+
+	fmt.Println("=== 原始数据 ===")
+	for i, kbar := range kbars {
+		fmt.Printf("K线%d: %s -> OHLCV(%.2f,%.2f,%.2f,%.2f,%d)\n",
+			i+1, kbar.Timestamp.Format("15:04:05"),
+			kbar.Open, kbar.High, kbar.Low, kbar.Close, kbar.Volume)
+	}
+
+	// 方法1: RFC3339格式时间戳为键
+	fmt.Println("\n=== 方法1: RFC3339格式时间戳为键 ===")
+	json1, err := ConvertToTimestampKeyedJSON(kbars)
+	if err != nil {
+		fmt.Printf("转换失败: %v\n", err)
+	} else {
+		fmt.Println(json1)
+	}
+
+	// 方法2: Unix时间戳为键
+	fmt.Println("\n=== 方法2: Unix时间戳为键 ===")
+	json2, err := ConvertToUnixTimestampKeyedJSON(kbars)
+	if err != nil {
+		fmt.Printf("转换失败: %v\n", err)
+	} else {
+		fmt.Println(json2)
+	}
+
+	// 方法3: 自定义格式时间戳为键
+	fmt.Println("\n=== 方法3: 自定义格式时间戳为键 ===")
+	json3, err := ConvertToCustomTimestampKeyedJSON(kbars, "2006-01-02 15:04:05")
+	if err != nil {
+		fmt.Printf("转换失败: %v\n", err)
+	} else {
+		fmt.Println(json3)
+	}
+
+	// 方法4: 毫秒时间戳为键
+	fmt.Println("\n=== 方法4: 毫秒时间戳为键 ===")
+	json4, err := ConvertToMillisTimestampKeyedJSON(kbars)
+	if err != nil {
+		fmt.Printf("转换失败: %v\n", err)
+	} else {
+		fmt.Println(json4)
+	}
+
+	// 方法5: 紧凑格式
+	fmt.Println("\n=== 方法5: 紧凑格式（数组形式） ===")
+	json5, err := ConvertToCompactTimestampKeyedJSON(kbars)
+	if err != nil {
+		fmt.Printf("转换失败: %v\n", err)
+	} else {
+		fmt.Println(json5)
+	}
+
+	// 方法6: 嵌套结构（按日期分组）
+	fmt.Println("\n=== 方法6: 按日期分组 ===")
+	json6, err := ConvertToNestedTimestampKeyedJSON(kbars)
+	if err != nil {
+		fmt.Printf("转换失败: %v\n", err)
+	} else {
+		fmt.Println(json6)
+	}
+
+	// 通用转换函数示例
+	fmt.Println("\n=== 通用转换函数示例 ===")
+
+	// 使用Unix时间戳，不美化
+	options1 := ConvertOptions{
+		UseUnixTime: true,
+		PrettyPrint: false,
+	}
+	compactJson, err := ConvertKBarToTimestampJSON(kbars, options1)
+	if err != nil {
+		fmt.Printf("转换失败: %v\n", err)
+	} else {
+		fmt.Printf("紧凑Unix时间戳: %s\n", compactJson)
+	}
+
+	// 使用自定义格式，美化输出
+	options2 := ConvertOptions{
+		TimeFormat:  "01-02 15:04",
+		PrettyPrint: true,
+	}
+	prettyJson, err := ConvertKBarToTimestampJSON(kbars, options2)
+	if err != nil {
+		fmt.Printf("转换失败: %v\n", err)
+	} else {
+		fmt.Printf("自定义格式:\n%s\n", prettyJson)
+	}
+
+	// 演示从JSON中获取特定时间戳的数据
+	fmt.Println("\n=== 从JSON中获取特定数据 ===")
+	if len(kbars) > 0 {
+		targetTime := kbars[0].Timestamp.Format(time.RFC3339)
+		if ohlcv, err := GetKBarByTimestamp(json1, targetTime); err != nil {
+			fmt.Printf("获取数据失败: %v\n", err)
+		} else {
+			fmt.Printf("时间戳 %s 对应的数据: %+v\n", targetTime, ohlcv)
+		}
+	}
 }
 
 func TestJsonDF(t *testing.T) {
@@ -538,6 +826,20 @@ func TestGetCSVYear(t *testing.T) {
 	fmt.Println(string(rsp))
 }
 
+func TestMap(t *testing.T) {
+	fmt.Println(" -=> Start TestMap ... ")
+	m := map[string]int{"a": 1, "b": 2, "c": 3}
+	dic := make(map[string]any, 1)
+	dic["m"] = m
+	dic["n"] = map[string]int{"a": 5, "b": 3, "c": 7}
+	jsonBytes, _ := json.Marshal(dic)
+	// fmt.Println(dic)
+	fmt.Println(string(jsonBytes))
+	// for k, v := range m {
+	// 	fmt.Println(k, v)
+	// }
+}
+
 func TestGetCSV1m(t *testing.T) {
 	fmt.Println(" -=> Start fetch csv.xz file year... ")
 
@@ -571,7 +873,7 @@ func TestGetKbars(t *testing.T) {
 	// tag := "1d"
 	tag := "1m"
 	ists := true
-	// ists := false
+	// ists = false
 
 	resp, err := GetKbarsHisByte(url, symbols, tag, sdate, edate, timeoutSeconds)
 	if err != nil {
@@ -585,12 +887,17 @@ func TestGetKbars(t *testing.T) {
 		fmt.Printf("将字节解组为 RawColData 结构体失败: %v\n", unmarshalErr)
 	} else {
 		// 处理获取到的 JSON 数据为 records 形式
-		records, transformErr := rcd.ToRecords(ists)
+		records, transformErr := rcd.ToRecords()
 		if transformErr != nil {
 			fmt.Printf("转换为 records 格式失败: %v\n", transformErr)
 		} else {
 			fmt.Println("\n--- 转换后的 records 格式 ---")
-			recordsJSON, _ := json.MarshalIndent(records[:5], "", "  ") // 格式化输出 JSON
+			recordsJSON, _ := json.MarshalIndent(records[:3], "", "  ") // 格式化输出 JSON
+			fmt.Printf("%s\n", recordsJSON)
+
+			fmt.Println("=" + strings.Repeat("=", 50))
+			records2 := ConvertEob2Timestamp(records, ists)
+			recordsJSON, _ = json.MarshalIndent(records2[:3], "", "  ") // 格式化输出 JSON
 			fmt.Printf("%s\n", recordsJSON)
 		}
 	}

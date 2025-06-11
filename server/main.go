@@ -41,13 +41,16 @@ func main() {
 	r.GET("/test2", srv.RouteTest2)
 	r.GET("/test3", srv.RouteTest3)
 
+	r.GET("/gm1m", srv.RouteGM1m)
 	r.GET("/csv1m", srv.RouteCSVxz1m)
 	r.GET("/csvyear", srv.RouteCSVxzYear)
 	r.GET("/csvmonth", srv.RouteCSVxzMonth)
 
-	r.GET("/current", srv.RouteCurrent)
+	r.GET("/kbdictts", srv.RouteKBDictTS)
+	r.GET("/kbdict", srv.RouteKBDict)
 	r.GET("/kbars", srv.RouteKbars)
 	r.GET("/kbarsn", srv.RouteKbarsN)
+	r.GET("/current", srv.RouteCurrent)
 
 	r.GET("/prevn", srv.RouteDatesPrevN)
 	r.GET("/nextn", srv.RouteDatesNextN)

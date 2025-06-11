@@ -23,7 +23,7 @@ func (rcd *RawColData) FromByte(bdata []byte) error {
 
 // transformToRecords 将 InputData 格式转换为 records 格式
 // records 格式是一个 map 数组，每个 map 的键是列名，值是对应的数据
-func (rcd *RawColData) ToRecords(istimestamp bool) ([]map[string]any, error) {
+func (rcd *RawColData) ToRecords() ([]map[string]any, error) {
 	var records []map[string]any
 
 	if len(rcd.Columns) == 0 && len(rcd.Data) > 0 {
@@ -37,12 +37,13 @@ func (rcd *RawColData) ToRecords(istimestamp bool) ([]map[string]any, error) {
 		}
 		record := make(map[string]any)
 		for i, colName := range rcd.Columns {
-			if istimestamp && (colName == "timestamp" || colName == "eob") {
-				tt := ConvertString2Time(fmt.Sprintf("%s", row[i]))
-				record[colName] = tt.UnixMilli()
-			} else {
-				record[colName] = row[i]
-			}
+			// if istimestamp && (colName == "timestamp" || colName == "eob") {
+			// 	tt := ConvertString2Time(fmt.Sprintf("%s", row[i]))
+			// 	record[colName] = tt.UnixMilli()
+			// } else {
+			// 	record[colName] = row[i]
+			// }
+			record[colName] = row[i]
 		}
 		records = append(records, record)
 	}

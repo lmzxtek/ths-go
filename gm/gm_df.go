@@ -63,6 +63,17 @@ func ParseJsonToDataframe(jsonStr string) (dataframe.DataFrame, error) {
 	return df, nil
 }
 
+// 解析 CSV 字符串为 DataFrame
+func ParseCSVToDataframe(csvData []byte, istimestamp bool) (dataframe.DataFrame, error) {
+	result, err := CSVToRecords(csvData, istimestamp)
+	if err != nil {
+		return dataframe.DataFrame{}, fmt.Errorf("解析CSV数据失败: %w", err)
+	}
+
+	df := dataframe.LoadMaps(result)
+	return df, nil
+}
+
 // 定义原始数据结构
 type RawData struct {
 	Columns []string `json:"columns"`
@@ -134,7 +145,7 @@ func DfGetCurrent(gmapi string, symbols string, timeoutSeconds int) (dataframe.D
 	// tarurl := fmt.Sprintf("%s/get_current", url)
 
 	// 获取历史K线数据
-	resp, err := GetCurrent(gmapi, symbols, timeoutSeconds, true)
+	resp, err := GetCurrentByte(gmapi, symbols, timeoutSeconds, true)
 	if err != nil {
 		// fmt.Printf("获取数据失败: %s\n", err)
 		return dataframe.DataFrame{}, err
@@ -153,7 +164,7 @@ func DfGetKbars(gmapi string, symbols string, tag string, sdate string, edate st
 	// tarurl := fmt.Sprintf("%s/get_current", url)
 
 	// 获取历史K线数据
-	resp, err := GetKbarsHis(gmapi, symbols, tag, sdate, edate, timeoutSeconds)
+	resp, err := GetKbarsHisByte(gmapi, symbols, tag, sdate, edate, timeoutSeconds)
 	if err != nil {
 		// fmt.Printf("获取数据失败: %s\n", err)
 		return dataframe.DataFrame{}, err
@@ -164,5 +175,52 @@ func DfGetKbars(gmapi string, symbols string, tag string, sdate string, edate st
 		// fmt.Printf("解析数据失败: %s\n", err)
 		return dataframe.DataFrame{}, err
 	}
+	return df, nil
+}
+
+// 获取Csv.xz按月行情数据
+func DfCSVMonth(gmcsv string, symbol string,
+	month int, year int, istimestamp bool,
+	timeoutSeconds int) (dataframe.DataFrame, error) {
+
+	url := fmt.Sprintf("%s/download/", gmcsv)
+
+	fpath := getFilePathMonth(symbol, year, month)
+	fmt.Println(fpath)
+
+	// 下载并读取数据
+	csvData, err := downloadAndReadData(url + fpath)
+	if err != nil {
+		return dataframe.DataFrame{}, err
+	}
+	result, err := CSVToRecords(csvData, istimestamp)
+	if err != nil {
+		return dataframe.DataFrame{}, fmt.Errorf("解析CSV失败: %w", err)
+	}
+
+	df := dataframe.LoadMaps(result)
+	return df, nil
+}
+
+// 获取Csv.xz按年行情数据
+func DfCSVYear(gmcsv string,
+	symbol string, tag string, year int, istimestamp bool,
+	timeoutSeconds int) (dataframe.DataFrame, error) {
+
+	url := fmt.Sprintf("%s/download/", gmcsv)
+	fpath := getFilePathYear(symbol, tag, year)
+	fmt.Println(fpath)
+
+	// 下载并读取数据
+	csvData, err := downloadAndReadData(url + fpath)
+	if err != nil {
+		return dataframe.DataFrame{}, err
+	}
+	result, err := CSVToRecords(csvData, istimestamp)
+	if err != nil {
+		return dataframe.DataFrame{}, fmt.Errorf("解析CSV失败: %w", err)
+	}
+
+	df := dataframe.LoadMaps(result)
 	return df, nil
 }

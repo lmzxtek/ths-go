@@ -31,7 +31,7 @@ func main() {
 	now := time.Now()
 	// 格式化当前日期为 "YYYY-MM-DD" 格式
 	today := now.Format("2006-01-02")
-	fmt.Println(" -=> Today is", today)
+	fmt.Println(" -=> Today: ", today)
 
 	fmt.Printf(" config file data:\n %v ", cfg)
 
@@ -40,6 +40,8 @@ func main() {
 	r.GET("/test", srv.RouteTest)
 	r.GET("/test2", srv.RouteTest2)
 	r.GET("/test3", srv.RouteTest3)
+
+	r.GET("/csv1m", srv.RouteCSVxz1m)
 	r.GET("/csvyear", srv.RouteCSVxzYear)
 	r.GET("/csvmonth", srv.RouteCSVxzMonth)
 

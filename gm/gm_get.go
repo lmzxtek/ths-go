@@ -7,22 +7,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/ulikunitz/xz"
 )
-
-// ConvertToDuration 转换秒数为时间段
-func ConvertToDuration(seconds int) time.Duration {
-	return time.Duration(seconds) * time.Second
-}
-
-func ParseURL(urlStr string) (*url.URL, error) {
-	return url.Parse(urlStr)
-}
 
 // makeRequest 发起一个HTTP请求并打印响应状态和响应体
 // func makeRequest(url string) {
@@ -281,10 +271,17 @@ func GetCalendar(gmapi string, syear string, eyear string, exchange string, time
 }
 
 // 查询指定日期的前n个交易日
-func GetPrevN(gmapi string, date string, count int, timeoutSeconds int) ([]byte, error) {
+func GetPrevNByte(gmapi string, date string, count int, timeoutSeconds int, include bool) ([]byte, error) {
 	url := fmt.Sprintf("%s/get_dates_prev_n", gmapi)
+
+	cdate := date
+	if include {
+		nxd, _ := time.Parse("2006-01-02", cdate)
+		cdate = nxd.AddDate(0, 0, 1).Format("2006-01-02")
+	}
+
 	params := map[string]string{
-		"date":  date,
+		"date":  cdate,
 		"count": fmt.Sprintf("%d", count),
 	}
 
@@ -295,13 +292,37 @@ func GetPrevN(gmapi string, date string, count int, timeoutSeconds int) ([]byte,
 	}
 
 	return resp, nil
+}
+
+// 查询指定日期的前n个交易日
+func GetPrevN(gmapi string, date string, count int, timeoutSeconds int, include bool) ([]any, error) {
+
+	rawData, err := GetPrevNByte(gmapi, date, count, timeoutSeconds, include)
+	if err != nil {
+		return nil, err
+	}
+
+	// 将获取到的字符串数据解析为 JSON 格式
+	var data []any
+	if err = json.Unmarshal(rawData, &data); err != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败: %v", err)
+	}
+
+	return data, nil
 }
 
 // 查询指定日期的后n个交易日
-func GetNextN(gmapi string, date string, count int, timeoutSeconds int) ([]byte, error) {
+func GetNextNByte(gmapi string, date string, count int, timeoutSeconds int, include bool) ([]byte, error) {
 	url := fmt.Sprintf("%s/get_dates_next_n", gmapi)
+
+	cdate := date
+	if include {
+		prd, _ := time.Parse("2006-01-02", cdate)
+		cdate = prd.AddDate(0, 0, -1).Format("2006-01-02")
+	}
+
 	params := map[string]string{
-		"date":  date,
+		"date":  cdate,
 		"count": fmt.Sprintf("%d", count),
 	}
 
@@ -314,8 +335,25 @@ func GetNextN(gmapi string, date string, count int, timeoutSeconds int) ([]byte,
 	return resp, nil
 }
 
+// 查询指定日期的前n个交易日
+func GetNextN(gmapi string, date string, count int, timeoutSeconds int, include bool) ([]any, error) {
+
+	rawData, err := GetNextNByte(gmapi, date, count, timeoutSeconds, include)
+	if err != nil {
+		return nil, err
+	}
+
+	// 将获取到的字符串数据解析为 JSON 格式
+	var data []any
+	if err = json.Unmarshal(rawData, &data); err != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败: %v", err)
+	}
+
+	return data, nil
+}
+
 // 获取行情快照数据
-func GetCurrent(gmapi string, symbols string, timeoutSeconds int, split bool) ([]byte, error) {
+func GetCurrentByte(gmapi string, symbols string, timeoutSeconds int, split bool) ([]byte, error) {
 	url := fmt.Sprintf("%s/get_current", gmapi)
 	params := map[string]string{
 		"symbols": symbols,
@@ -335,8 +373,23 @@ func GetCurrent(gmapi string, symbols string, timeoutSeconds int, split bool) ([
 	return resp, nil
 }
 
+// 获取行情快照数据
+func GetCurrent(gmapi string, symbols string, timeoutSeconds int, split bool) ([]any, error) {
+	rawData, err := GetCurrentByte(gmapi, symbols, timeoutSeconds, split)
+	if err != nil {
+		return nil, fmt.Errorf("获取数据失败(GetCurrentByte()): %v", err)
+	}
+
+	// 将获取到的字符串数据解析为 JSON 格式
+	var data []any
+	if err = json.Unmarshal(rawData, &data); err != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(GetCurrentByte()): %v", err)
+	}
+	return data, nil
+}
+
 // 获取K线行情数据
-func GetKbarsHis(gmapi string,
+func GetKbarsHisByte(gmapi string,
 	symbols string, tag string,
 	sdate string, edate string,
 	timeoutSeconds int) ([]byte, error) {
@@ -359,7 +412,31 @@ func GetKbarsHis(gmapi string,
 }
 
 // 获取K线行情数据
-func GetKbarsHisN(gmapi string,
+func GetKbarsHis(gmapi string,
+	symbols string, tag string,
+	sdate string, edate string, istimestamp bool,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	rawData, err := GetKbarsHisByte(gmapi, symbols, tag, sdate, edate, timeoutSeconds)
+	if err != nil {
+		return nil, fmt.Errorf("获取数据失败(GetKbarsHisByte()): %v", err)
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(rawData, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(GetKbarsHisByte()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords(istimestamp)
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(GetKbarsHisByte()): %v", transformErr)
+	}
+
+	return records, nil
+}
+
+// 获取K线行情数据
+func GetKbarsHisNByte(gmapi string,
 	symbol string, tag string,
 	count string, edate string,
 	timeoutSeconds int) ([]byte, error) {
@@ -381,6 +458,30 @@ func GetKbarsHisN(gmapi string,
 	}
 
 	return resp, nil
+}
+
+// 获取K线行情数据
+func GetKbarsHisN(gmapi string,
+	symbol string, tag string,
+	count string, edate string, istimestamp bool,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	rawData, err := GetKbarsHisNByte(gmapi, symbol, tag, count, edate, timeoutSeconds)
+	if err != nil {
+		return nil, fmt.Errorf("获取数据失败(GetKbarsHisNByte()): %v", err)
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(rawData, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(GetKbarsHisN()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords(istimestamp)
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(GetKbarsHisN()): %v", transformErr)
+	}
+
+	return records, nil
 }
 
 func getFilePathYear(symbol string, tag string, year int) string {
@@ -498,7 +599,8 @@ func CsvToJSON(csvData []byte) ([]byte, error) {
 	}
 
 	// 转换为JSON
-	jsonData, err := json.MarshalIndent(result, "", "  ")
+	// jsonData, err := json.MarshalIndent(result, "", "  ")
+	jsonData, err := json.Marshal(result)
 	if err != nil {
 		return nil, fmt.Errorf("转换JSON失败: %w", err)
 	}
@@ -506,48 +608,8 @@ func CsvToJSON(csvData []byte) ([]byte, error) {
 	return jsonData, nil
 }
 
-// CSVToJson reads a CSV file and converts its content to a JSON array of objects.
-// It attempts to infer data types for each field (int, float, bool, string).
-func CSVToJson(csvData []byte) ([]byte, error) {
-
-	reader := csv.NewReader(strings.NewReader(string(csvData)))
-
-	// 读取所有CSV记录
-	records, err := reader.ReadAll()
-	if err != nil {
-		return nil, fmt.Errorf("解析CSV失败: %w", err)
-	}
-
-	if len(records) == 0 {
-		return nil, fmt.Errorf("CSV文件为空")
-	}
-
-	// 第一行作为表头
-	headers := records[0]
-	// 将每一行数据转换为map
-	var result []map[string]any
-	for i := 1; i < len(records); i++ {
-		row := make(map[string]any)
-		for j, value := range records[i] {
-			if j < len(headers) {
-				// row[headers[j]] = value
-				parsedValue := parseValue(value)
-				row[headers[j]] = parsedValue
-			}
-		}
-		result = append(result, row)
-	}
-
-	jsonData, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal JSON: %w", err)
-	}
-
-	return jsonData, nil
-}
-
 // parseValue attempts to convert a string value to its appropriate Go type.
-func parseValue(s string) interface{} {
+func parseValue(s string) any {
 	// Try parsing as integer
 	if i, err := strconv.ParseInt(s, 10, 64); err == nil {
 		return i
@@ -571,8 +633,66 @@ func parseValue(s string) interface{} {
 	return s
 }
 
+func CSVToRecords(csvData []byte, istimestamp bool) ([]map[string]any, error) {
+
+	reader := csv.NewReader(strings.NewReader(string(csvData)))
+
+	// 读取所有CSV记录
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, fmt.Errorf("解析CSV失败: %w", err)
+	}
+
+	if len(records) == 0 {
+		return nil, fmt.Errorf("CSV文件为空")
+	}
+
+	// 第一行作为表头
+	headers := records[0]
+	// 将每一行数据转换为map
+	var result []map[string]any
+	for i := 1; i < len(records); i++ {
+		row := make(map[string]any)
+		for j, value := range records[i] {
+			if j < len(headers) {
+				// row[headers[j]] = value
+				parsedValue := parseValue(value)
+				head := headers[j]
+				if istimestamp && (head == "timestamp" || head == "date") {
+					// 转换为时间戳
+					tt := ConvertString2Time(fmt.Sprintf("%s", parsedValue))
+					row[head] = tt.UnixMilli()
+				} else {
+					row[head] = parsedValue
+				}
+			}
+		}
+		result = append(result, row)
+	}
+
+	return result, nil
+}
+
+// CSVToJson reads a CSV file and converts its content to a JSON array of objects.
+// It attempts to infer data types for each field (int, float, bool, string).
+func CSVToJson(csvData []byte, istimestamp bool) ([]byte, error) {
+
+	result, err := CSVToRecords(csvData, istimestamp)
+	if err != nil {
+		return nil, fmt.Errorf("解析CSV失败: %w", err)
+	}
+
+	// jsonData, err := json.MarshalIndent(result, "", "  ")
+	jsonData, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+
+	return jsonData, nil
+}
+
 // downloadAndConvertToJSON 从URL下载CSV数据并转换为JSON
-func DownloadAndConvertToJSON(url string) ([]byte, error) {
+func DownloadAndConvertToJSON(url string, istimestamp bool) ([]byte, error) {
 	// 下载并读取数据
 	csvData, err := downloadAndReadData(url)
 	if err != nil {
@@ -581,7 +701,7 @@ func DownloadAndConvertToJSON(url string) ([]byte, error) {
 
 	// 转换为JSON
 	// jsonData, err := csvToJSON(csvData)
-	jsonData, err := CSVToJson(csvData)
+	jsonData, err := CSVToJson(csvData, istimestamp)
 	if err != nil {
 		return nil, err
 	}
@@ -590,17 +710,17 @@ func DownloadAndConvertToJSON(url string) ([]byte, error) {
 }
 
 // 获取Csv.xz按月行情数据
-func GetCSVMonth(gmcsv string,
+func GetCSVMonthJson(gmcsv string,
 	symbol string,
-	month int, year int,
+	month int, year int, istimestamp bool,
 	timeoutSeconds int) ([]byte, error) {
 
 	url := fmt.Sprintf("%s/download/", gmcsv)
 
 	fpath := getFilePathMonth(symbol, year, month)
-	fmt.Println(fpath)
+	// fmt.Println(fpath)
 
-	resp, err := DownloadAndConvertToJSON(url + fpath)
+	resp, err := DownloadAndConvertToJSON(url+fpath, istimestamp)
 	if err != nil {
 		// fmt.Printf("获取数据失败: %s\n", err)
 		return nil, err
@@ -609,19 +729,147 @@ func GetCSVMonth(gmcsv string,
 }
 
 // 获取Csv.xz按年行情数据
-func GetCSVYear(gmcsv string,
-	symbol string, tag string, year int,
+func GetCSVYearJson(gmcsv string,
+	symbol string, tag string, year int, istimestamp bool,
 	timeoutSeconds int) ([]byte, error) {
 
 	url := fmt.Sprintf("%s/download/", gmcsv)
 
 	fpath := getFilePathYear(symbol, tag, year)
-	fmt.Println(fpath)
+	// fmt.Println(fpath)
 
-	resp, err := DownloadAndConvertToJSON(url + fpath)
+	resp, err := DownloadAndConvertToJSON(url+fpath, istimestamp)
 	if err != nil {
 		// fmt.Printf("获取数据失败: %s\n", err)
 		return nil, err
 	}
 	return resp, nil
+}
+
+// 获取Csv.xz按月行情数据
+func GetCSVMonth(gmcsv string,
+	symbol string,
+	month int, year int, istimestamp bool,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	url := fmt.Sprintf("%s/download/", gmcsv)
+	fpath := getFilePathMonth(symbol, year, month)
+	// fmt.Println(fpath)
+
+	// 下载并读取数据
+	csvData, err := downloadAndReadData(url + fpath)
+	if err != nil {
+		return nil, err
+	}
+	result, err := CSVToRecords(csvData, istimestamp)
+	if err != nil {
+		return nil, fmt.Errorf("解析CSV失败: %w", err)
+	}
+	return result, nil
+}
+
+// 获取Csv.xz按年行情数据
+func GetCSVYear(gmcsv string,
+	symbol string, tag string, year int, istimestamp bool,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	url := fmt.Sprintf("%s/download/", gmcsv)
+	fpath := getFilePathYear(symbol, tag, year)
+	// fmt.Println(fpath)
+
+	// 下载并读取数据
+	csvData, err := downloadAndReadData(url + fpath)
+	if err != nil {
+		return nil, err
+	}
+	result, err := CSVToRecords(csvData, istimestamp)
+	if err != nil {
+		return nil, fmt.Errorf("解析CSV失败: %w", err)
+	}
+	return result, nil
+}
+
+// 按日期范围获取1m分时行情数据
+func GetCSV1m(gmcsv string,
+	symbol string, sdate string, edate string, istimestamp bool,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	// url := fmt.Sprintf("%s/download/", gmcsv)
+	url := gmcsv
+
+	now := time.Now()
+	today := now.Format("2006-01-02")
+
+	sday := today
+	eday := today
+	if sdate != "" {
+		sday = sdate
+	}
+	if edate != "" {
+		eday = edate
+	}
+	if sday > eday {
+		return nil, fmt.Errorf("开始日期大于结束日期")
+	}
+
+	// 解析开始和结束日期
+	sdateTime, err := time.Parse("2006-01-02", sday)
+	if err != nil {
+		return nil, fmt.Errorf(" error parsing start date: %v", err)
+	}
+
+	edateTime, err := time.Parse("2006-01-02", eday)
+	if err != nil {
+		return nil, fmt.Errorf(" error parsing end date: %v", err)
+	}
+
+	syy := sdateTime.Year()
+	smm := int(sdateTime.Month())
+	eyy := edateTime.Year()
+	emm := int(edateTime.Month())
+
+	tag := "1m"
+	var ddd []map[string]any
+	for yy := syy; yy <= eyy; yy++ {
+		if yy == syy || yy == eyy {
+			var smonth, emonth int
+
+			smonth = 1
+			emonth = 12
+			if yy == syy {
+				smonth = smm
+			}
+			if yy == eyy {
+				emonth = emm
+			}
+			if yy == now.Year() && emonth > int(now.Month()) {
+				emonth = int(now.Month())
+			}
+
+			var ddm []map[string]any
+			for im := smonth; im <= emonth; im++ {
+
+				rsp, err := GetCSVMonth(url, symbol, im, yy, istimestamp, timeoutSeconds)
+				if err != nil {
+					fmt.Printf("获取月CSV数据失败: %s", err)
+				}
+				ddm = append(ddm, rsp...)
+			}
+
+			if ddm != nil {
+				ddd = append(ddd, ddm...)
+			}
+		} else {
+			// 调用年份数据获取函数
+			rsp, err := GetCSVYear(url, symbol, tag, yy, istimestamp, timeoutSeconds)
+			if err != nil {
+				fmt.Printf("获取年CSV数据失败: %s", err)
+			}
+			if ddd != nil {
+				ddd = append(ddd, rsp...)
+			}
+		}
+	}
+
+	return ddd, nil
 }

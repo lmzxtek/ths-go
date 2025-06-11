@@ -56,7 +56,7 @@ func main() {
 		// }
 		// fmt.Println(df)
 
-		resp, err := gm.GetCurrent(symbols, url, timeoutSeconds, true)
+		resp, err := gm.GetCurrentByte(symbols, url, timeoutSeconds, true)
 		if err != nil {
 			fmt.Printf("获取数据失败: %s\n", err)
 		}

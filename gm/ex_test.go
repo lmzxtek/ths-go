@@ -782,7 +782,7 @@ func TestDownloadCSV(t *testing.T) {
 	url := "http://localhost:5002/download/kbars-month/month-2025/month-2025-05--SH-60/kbars-1m--SHSE.601088--2025-05-.csv.xz"
 	istime := true
 
-	rsp, err := DownloadAndConvertToJSON(url, istime)
+	rsp, err := DownloadAndConvertToJSON(url, istime, "timestamp")
 	if err != nil {
 		fmt.Printf("获取数据失败: %s\n", err)
 	}
@@ -819,7 +819,7 @@ func TestGetCSVYear(t *testing.T) {
 	year := 2025
 	istime := true
 
-	rsp, err := GetCSVYearJson(url, symbol, tag, year, istime, 10)
+	rsp, err := GetCSVYearJson(url, symbol, tag, year, istime, "timestamp", 10)
 	if err != nil {
 		fmt.Printf("获取数据失败: %s\n", err)
 	}
@@ -852,7 +852,7 @@ func TestGetCSV1m(t *testing.T) {
 	// year := 2025
 	istime := true
 	isclip := true
-	istime = false
+	// istime = false
 	// isclip = false
 
 	rsp, err := GetCSV1m(url, symbol, "2025-05-29", "2025-05-29", istime, isclip, 10)
@@ -862,6 +862,63 @@ func TestGetCSV1m(t *testing.T) {
 
 	jsonData, _ := json.Marshal(rsp[len(rsp)-5:])
 	fmt.Println(string(jsonData))
+	// fmt.Println(string(rsp))
+	// fmt.Println(rsp[:5])
+}
+
+func TestGetCSVTag(t *testing.T) {
+	fmt.Println(" -=> Start fetch csv.xz file by tag... ")
+
+	url := gmCSV
+
+	symbol := "SHSE.601088"
+	// tag := "1m"
+	tag := "vv"
+	tag = "pe"
+	// year := 2025
+	istime := true
+	isclip := true
+	istime = false
+	// isclip = false
+
+	rsp, err := GetCSVTag(url, tag, symbol, "2025-06-01", "2025-06-13", istime, isclip, 10)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+		return
+	}
+
+	fmt.Println("=" + strings.Repeat("=", 50))
+	// jsonData, _ := json.Marshal(rsp[len(rsp)-5:])
+	// jsonData, _ := json.Marshal(rsp[:5])
+	jsonData, _ := json.Marshal(rsp)
+	fmt.Println(string(jsonData))
+	// fmt.Println(string(rsp))
+	// fmt.Println(rsp[:5])
+	fmt.Println("=" + strings.Repeat("=", 50))
+}
+
+func TestGetGM1m(t *testing.T) {
+	fmt.Println(" -=> Start fetch gm1m ... ")
+
+	symbol := "SHSE.601088"
+	// year := 2025
+	istime := true
+	isclip := true
+	// istime = false
+	// isclip = false
+
+	rsp, err := GetGM1m(gmCSV, gmURL, symbol, "2025-06-05", "2025-06-09", istime, isclip, 10)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+
+	fmt.Println("=" + strings.Repeat("=", 50))
+	jsonData, _ := json.Marshal(rsp[:5])
+	fmt.Println(string(jsonData))
+	fmt.Println("=" + strings.Repeat("=", 50))
+	jsonData, _ = json.Marshal(rsp[len(rsp)-5:])
+	fmt.Println(string(jsonData))
+	fmt.Println("=" + strings.Repeat("=", 50))
 	// fmt.Println(string(rsp))
 	// fmt.Println(rsp[:5])
 }

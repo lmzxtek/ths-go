@@ -505,10 +505,15 @@ func RouteCSVxzYear(c *gin.Context) {
 	}
 	iyear, _ := strconv.Atoi(cyear)
 
-	// rawData, err := gm.GetCSVYearJson(gmcsv, symbol, tag, iyear, timeoutSeconds)
-	rawData, err := gm.GetCSVYear(gmcsv, symbol, tag, iyear, istimestamp, timeoutSeconds)
+	lookuptab := map[string]string{
+		"1m": "timestamp",
+		"vv": "timestamp",
+		"pe": "trade_date",
+	}
+
+	rawData, err := gm.GetCSVYear(gmcsv, symbol, tag, iyear, istimestamp, lookuptab[tag], timeoutSeconds)
 	if err != nil {
-		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetCSVMonth)": err.Error()})
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetCSVYear)": err.Error()})
 		return
 	}
 	// c.JSON(http.StatusOK, string(rawData))
@@ -564,6 +569,41 @@ func RouteCSVxz1m(c *gin.Context) {
 	// }
 
 	// c.JSON(http.StatusOK, string(jsonData))
+}
+
+func RouteCSVxzTag(c *gin.Context) {
+	symbol := c.DefaultQuery("symbol", "")
+	if symbol == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须参数"))
+		return
+	}
+
+	timeoutSeconds := 10
+	now := time.Now()
+	today := now.Format("2006-01-02")
+
+	sdate := c.DefaultQuery("sdate", today)
+	edate := c.DefaultQuery("edate", today)
+	tag := c.DefaultQuery("tag", "vv")
+
+	timestamp := c.DefaultQuery("timestamp", "false")
+	istimestamp := false
+	if timestamp == "true" {
+		istimestamp = true
+	}
+
+	clip := c.DefaultQuery("clip", "true")
+	isclip := false
+	if clip == "true" {
+		isclip = true
+	}
+
+	rawData, err := gm.GetCSVTag(gmcsv, tag, symbol, sdate, edate, istimestamp, isclip, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetCSVTag)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
 }
 
 func RouteGM1m(c *gin.Context) {

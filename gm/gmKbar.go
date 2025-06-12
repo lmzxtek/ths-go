@@ -27,6 +27,10 @@ type KLineData struct {
 	Turnover  float64 `json:"turnover"` // 成交额, 非必须字段，如果需要展示技术指标'EMV'和'AVP'，则需要为该字段填充数据。
 }
 
+type KBarArray []KBar              // KBar 数组
+type KBarMapInt64 map[int64]KBar   // KBar 字典
+type KBarMapString map[string]KBar // KBar 字典
+
 type KbarMapAny struct {
 	Datalist map[any]KBar `json:"timestamp"`
 }

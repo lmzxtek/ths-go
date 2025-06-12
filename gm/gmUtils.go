@@ -96,6 +96,7 @@ func ParseTimestamp(ts any) (time.Time, error) {
 			"01/02/2006",          // "01/02/2006"
 		}
 
+		v = strings.TrimSpace(v)
 		for _, format := range formats {
 			if t, err := time.Parse(format, v); err == nil {
 				return t, nil

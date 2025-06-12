@@ -64,8 +64,8 @@ func ParseJsonToDataframe(jsonStr string) (dataframe.DataFrame, error) {
 }
 
 // 解析 CSV 字符串为 DataFrame
-func ParseCSVToDataframe(csvData []byte, istimestamp bool) (dataframe.DataFrame, error) {
-	result, err := CSVToRecords(csvData, istimestamp)
+func ParseCSVToDataframe(csvData []byte, istimestamp bool, tskey string) (dataframe.DataFrame, error) {
+	result, err := CSVToRecords(csvData, istimestamp, tskey)
 	if err != nil {
 		return dataframe.DataFrame{}, fmt.Errorf("解析CSV数据失败: %w", err)
 	}
@@ -193,7 +193,7 @@ func DfCSVMonth(gmcsv string, symbol string,
 	if err != nil {
 		return dataframe.DataFrame{}, err
 	}
-	result, err := CSVToRecords(csvData, istimestamp)
+	result, err := CSVToRecords(csvData, istimestamp, "timestamp")
 	if err != nil {
 		return dataframe.DataFrame{}, fmt.Errorf("解析CSV失败: %w", err)
 	}
@@ -204,7 +204,7 @@ func DfCSVMonth(gmcsv string, symbol string,
 
 // 获取Csv.xz按年行情数据
 func DfCSVYear(gmcsv string,
-	symbol string, tag string, year int, istimestamp bool,
+	symbol string, tag string, year int, istimestamp bool, tskey string,
 	timeoutSeconds int) (dataframe.DataFrame, error) {
 
 	url := fmt.Sprintf("%s/download/", gmcsv)
@@ -216,7 +216,7 @@ func DfCSVYear(gmcsv string,
 	if err != nil {
 		return dataframe.DataFrame{}, err
 	}
-	result, err := CSVToRecords(csvData, istimestamp)
+	result, err := CSVToRecords(csvData, istimestamp, tskey)
 	if err != nil {
 		return dataframe.DataFrame{}, fmt.Errorf("解析CSV失败: %w", err)
 	}

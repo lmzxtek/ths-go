@@ -42,7 +42,9 @@ func main() {
 	r.GET("/test3", srv.RouteTest3)
 
 	r.GET("/gm1m", srv.RouteGM1m)
+
 	r.GET("/csv1m", srv.RouteCSVxz1m)
+	r.GET("/csvtag", srv.RouteCSVxzTag)
 	r.GET("/csvyear", srv.RouteCSVxzYear)
 	r.GET("/csvmonth", srv.RouteCSVxzMonth)
 

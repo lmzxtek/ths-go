@@ -394,18 +394,27 @@ func ConvertEob2Timestamp(records []map[string]any, istimestamp bool) []map[stri
 	for i := range records {
 		dd1 := make(map[string]any, len(records[i]))
 		for k, v := range records[i] {
-			if k == "timestamp" || k == "eob" {
+			if k == "timestamp" || k == "eob" || k == "trade_date" {
 				key := "timestamp"
-				// tstr := fmt.Sprintf("%s", records[i]["eob"])
 				tstr := v.(string)
-				tstr = strings.TrimSpace(tstr)
-				tstr = strings.TrimSuffix(tstr, "+08:00")
-				tstr = strings.Replace(tstr, "T", " ", 1)
+				// tstr = strings.TrimSpace(tstr)
+				// tstr = strings.TrimSuffix(tstr, "+08:00")
+				// tstr = strings.Replace(tstr, "T", " ", 1)
+				tt, err := ParseTimestamp(tstr)
+				if err != nil {
+					continue
+				}
 				if istimestamp {
-					t, _ := time.Parse("2006-01-02 15:04:05", tstr)
-					dd1[key] = t.UnixMilli()
+					// t, _ := time.Parse("2006-01-02 15:04:05", tstr)
+					// dd1[key] = t.UnixMilli()
+					dd1[key] = tt.UnixMilli()
 				} else {
-					dd1[key] = tstr
+					if len(tstr) <= 10 {
+						dd1[key] = tt.Format("2006-01-02")
+					} else {
+						dd1[key] = tt.Format("2006-01-02 15:04:05")
+					}
+					// dd1[key] = tstr
 				}
 			} else {
 				dd1[k] = v
@@ -730,7 +739,7 @@ func parseValue(s string) any {
 	return s
 }
 
-func CSVToRecords(csvData []byte, istimestamp bool) ([]map[string]any, error) {
+func CSVToRecords(csvData []byte, istimestamp bool, tskey string) ([]map[string]any, error) {
 
 	reader := csv.NewReader(strings.NewReader(string(csvData)))
 
@@ -755,9 +764,15 @@ func CSVToRecords(csvData []byte, istimestamp bool) ([]map[string]any, error) {
 				// row[headers[j]] = value
 				parsedValue := parseValue(value)
 				head := headers[j]
-				if istimestamp && (head == "timestamp" || head == "date") {
+				if istimestamp && (head == tskey || head == "timestamp") {
 					// 转换为时间戳
-					tt := ConvertString2Time(fmt.Sprintf("%s", parsedValue))
+					// parsedValue,err = string.
+					// tt := ConvertString2Time(parsedValue.(string))
+					tt, err := ParseTimestamp(parsedValue.(string))
+					if err != nil {
+						// return nil, fmt.Errorf("转换时间戳失败: %w", err)
+						continue // 跳过错误数据
+					}
 					row[head] = tt.UnixMilli()
 				} else {
 					row[head] = parsedValue
@@ -772,9 +787,9 @@ func CSVToRecords(csvData []byte, istimestamp bool) ([]map[string]any, error) {
 
 // CSVToJson reads a CSV file and converts its content to a JSON array of objects.
 // It attempts to infer data types for each field (int, float, bool, string).
-func CSVToJson(csvData []byte, istimestamp bool) ([]byte, error) {
+func CSVToJson(csvData []byte, istimestamp bool, tskey string) ([]byte, error) {
 
-	result, err := CSVToRecords(csvData, istimestamp)
+	result, err := CSVToRecords(csvData, istimestamp, tskey)
 	if err != nil {
 		return nil, fmt.Errorf("解析CSV失败: %w", err)
 	}
@@ -789,7 +804,7 @@ func CSVToJson(csvData []byte, istimestamp bool) ([]byte, error) {
 }
 
 // downloadAndConvertToJSON 从URL下载CSV数据并转换为JSON
-func DownloadAndConvertToJSON(url string, istimestamp bool) ([]byte, error) {
+func DownloadAndConvertToJSON(url string, istimestamp bool, tskey string) ([]byte, error) {
 	// 下载并读取数据
 	csvData, err := downloadAndReadData(url)
 	if err != nil {
@@ -798,7 +813,7 @@ func DownloadAndConvertToJSON(url string, istimestamp bool) ([]byte, error) {
 
 	// 转换为JSON
 	// jsonData, err := csvToJSON(csvData)
-	jsonData, err := CSVToJson(csvData, istimestamp)
+	jsonData, err := CSVToJson(csvData, istimestamp, tskey)
 	if err != nil {
 		return nil, err
 	}
@@ -817,7 +832,7 @@ func GetCSVMonthJson(gmcsv string,
 	fpath := getFilePathMonth(symbol, year, month)
 	// fmt.Println(fpath)
 
-	resp, err := DownloadAndConvertToJSON(url+fpath, istimestamp)
+	resp, err := DownloadAndConvertToJSON(url+fpath, istimestamp, "timestamp")
 	if err != nil {
 		// fmt.Printf("获取数据失败: %s\n", err)
 		return nil, err
@@ -827,7 +842,7 @@ func GetCSVMonthJson(gmcsv string,
 
 // 获取Csv.xz按年行情数据
 func GetCSVYearJson(gmcsv string,
-	symbol string, tag string, year int, istimestamp bool,
+	symbol string, tag string, year int, istimestamp bool, tskey string,
 	timeoutSeconds int) ([]byte, error) {
 
 	url := fmt.Sprintf("%s/download/", gmcsv)
@@ -835,7 +850,7 @@ func GetCSVYearJson(gmcsv string,
 	fpath := getFilePathYear(symbol, tag, year)
 	// fmt.Println(fpath)
 
-	resp, err := DownloadAndConvertToJSON(url+fpath, istimestamp)
+	resp, err := DownloadAndConvertToJSON(url+fpath, istimestamp, tskey)
 	if err != nil {
 		// fmt.Printf("获取数据失败: %s\n", err)
 		return nil, err
@@ -858,7 +873,7 @@ func GetCSVMonth(gmcsv string,
 	if err != nil {
 		return nil, err
 	}
-	result, err := CSVToRecords(csvData, istimestamp)
+	result, err := CSVToRecords(csvData, istimestamp, "timestamp")
 	if err != nil {
 		return nil, fmt.Errorf("解析CSV失败: %w", err)
 	}
@@ -867,20 +882,22 @@ func GetCSVMonth(gmcsv string,
 
 // 获取Csv.xz按年行情数据
 func GetCSVYear(gmcsv string,
-	symbol string, tag string, year int, istimestamp bool,
+	symbol string, tag string, year int, istimestamp bool, tskey string,
 	timeoutSeconds int) ([]map[string]any, error) {
 
 	url := fmt.Sprintf("%s/download/", gmcsv)
 	fpath := getFilePathYear(symbol, tag, year)
-	// fmt.Println(fpath)
+	// fmt.Println(url + fpath)
 
 	// 下载并读取数据
 	csvData, err := downloadAndReadData(url + fpath)
 	if err != nil {
+		fmt.Println(url + fpath)
 		return nil, err
 	}
-	result, err := CSVToRecords(csvData, istimestamp)
+	result, err := CSVToRecords(csvData, istimestamp, tskey)
 	if err != nil {
+		fmt.Println("解析CSV失败: %w", err)
 		return nil, fmt.Errorf("解析CSV失败: %w", err)
 	}
 	return result, nil
@@ -928,40 +945,9 @@ func filterDataByDate(data []map[string]any, dateKey, sdateStr, edateStr string)
 		itemTime, parseErr := ParseTimestamp(timestampVal)
 		if parseErr != nil {
 			// 如果解析失败，根据需求跳过或报错
-			fmt.Printf("警告: 无法解析日期字符串 '%s': %v\n", timestampVal, parseErr)
+			fmt.Printf("警告: 无法解析日期 '%s': %v\n", timestampVal, parseErr)
 			continue
 		}
-		// var itemTime time.Time
-		// switch v := timestampVal.(type) {
-		// case int64:
-		// 	// 假设是Unix秒时间戳
-		// 	itemTime = time.Unix(v, 0)
-		// case float64:
-		// 	// 假设是Unix秒时间戳 (可能从JSON解码为float64)
-		// 	itemTime = time.Unix(int64(v), 0)
-		// case string:
-		// 	// 假设是可解析的日期字符串，例如 "2023-01-01T10:00:00Z"
-		// 	// 你需要根据实际字符串格式调整解析方式
-		// 	// parsedTime, parseErr := time.Parse(time.RFC3339, v) // 示例：RFC3339格式
-		// 	parsedTime, parseErr := ParseTimestamp(v)
-		// 	if parseErr != nil {
-		// 		// 如果解析失败，根据需求跳过或报错
-		// 		fmt.Printf("警告: 无法解析日期字符串 '%s': %v\n", v, parseErr)
-		// 		continue
-		// 	}
-		// 	itemTime = parsedTime
-		// // 根据你的实际情况添加其他类型处理，例如 int 或 time.Time 本身
-		// default:
-		// 	fmt.Printf("警告: 未知的时间戳类型 '%T'，跳过此项\n", v)
-		// 	continue
-		// }
-
-		// 比较时间 (只比较日期部分，忽略时间部分)
-		// 为了只比较日期，我们可以将它们都设置为当天的开始时间
-		// itemTime = itemTime.Local().Truncate(24 * time.Hour)
-		// sdateTruncated := stime.Local().Truncate(24 * time.Hour)
-		// edateTruncated := etime.Local().Truncate(24 * time.Hour)
-
 		// 判断是否在范围内
 		if (itemTime.Equal(stime) || itemTime.After(stime)) &&
 			(itemTime.Equal(etime) || itemTime.Before(etime)) {
@@ -1050,24 +1036,100 @@ func GetCSV1m(gmcsv string,
 			}
 		} else {
 			// 调用年份数据获取函数
-			rsp, err := GetCSVYear(url, symbol, tag, yy, istimestamp, timeoutSeconds)
+			rsp, err := GetCSVYear(url, symbol, tag, yy, istimestamp, "timestamp", timeoutSeconds)
 			if err != nil {
-				fmt.Printf("获取年CSV数据失败: %s", err)
+				fmt.Printf("没有获取到数据: %d", yy)
 			}
-			if ddd != nil {
+			if rsp != nil {
 				ddd = append(ddd, rsp...)
 			}
 		}
 	}
 
 	if len(ddd) == 0 {
-		return nil, fmt.Errorf("没有获取到数据")
+		return nil, fmt.Errorf("没有获取到数据: %d - %d", syy, eyy)
 	}
 	if clip {
 		// 过滤数据
 		ddd, err = filterDataByDate(ddd, "timestamp", sday, eday)
 		if err != nil {
 			return nil, fmt.Errorf("过滤数据失败: %w", err)
+		}
+	}
+	return ddd, nil
+}
+
+// 按日期范围获取[vv,pe]日频行情数据
+// tag string: vv,pe
+func GetCSVTag(gmcsv string, tag string,
+	symbol string, sdate string, edate string,
+	istimestamp bool, clip bool,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	// url := fmt.Sprintf("%s/download/", gmcsv)
+	url := gmcsv
+
+	now := time.Now()
+	today := now.Format("2006-01-02")
+
+	sday := today
+	eday := today
+	if sdate != "" {
+		sday = sdate
+	}
+	if edate != "" {
+		eday = edate
+	}
+	if sday > eday {
+		return nil, fmt.Errorf("开始日期大于结束日期")
+	}
+
+	// 解析开始和结束日期
+	sdateTime, err := time.Parse("2006-01-02", sday)
+	if err != nil {
+		return nil, fmt.Errorf(" error parsing start date: %v", err)
+	}
+
+	edateTime, err := time.Parse("2006-01-02", eday)
+	if err != nil {
+		return nil, fmt.Errorf(" error parsing end date: %v", err)
+	}
+
+	syy := sdateTime.Year()
+	eyy := edateTime.Year()
+
+	lookuptab := map[string]string{
+		"1m": "timestamp",
+		"vv": "timestamp",
+		"pe": "trade_date",
+	}
+
+	// istimestamp = false
+	var ddd []map[string]any
+	for yy := syy; yy <= eyy; yy++ {
+		rsp, err := GetCSVYear(url, symbol, tag, yy, istimestamp, lookuptab[tag], timeoutSeconds)
+		if err != nil {
+			// fmt.Printf("获取年CSV数据失败: %s", err)
+			fmt.Printf("没有获取到数据: %d\n", yy)
+		}
+		if rsp != nil {
+			ddd = append(ddd, rsp...)
+		}
+	}
+
+	if len(ddd) == 0 {
+		return nil, fmt.Errorf("没有获取到数据(%s): %d - %d", tag, syy, eyy)
+	}
+	if clip {
+		// 过滤数据
+		ddd, err = filterDataByDate(ddd, lookuptab[tag], sday, eday)
+		if err != nil {
+			fmt.Printf("过滤数据失败: %s\n", err)
+			return nil, fmt.Errorf("过滤数据失败: %w", err)
+		}
+		if len(ddd) == 0 {
+			fmt.Printf("过滤数据后数据为空:(%s): %d - %d\n", tag, syy, eyy)
+			return nil, fmt.Errorf("过滤数据后数据为空(%s): %d - %d", tag, syy, eyy)
 		}
 	}
 	return ddd, nil
@@ -1098,7 +1160,14 @@ func GetGM1m(gmcsv string, gmapi string,
 		ddd = append(ddd, dcsv...)
 		// fmt.Printf("获取CSV数据成功: %d条: %s - %s\n", len(dcsv), sday, eday)
 		// etime, _ := time.Parse("2006-01-02", dcsv[len(dcsv)-1]["timestamp"].(string))
-		etime := ConvertString2Time(dcsv[len(dcsv)-1]["timestamp"].(string))
+		tsStr := dcsv[len(dcsv)-1]["timestamp"]
+		etime, _ := ParseTimestamp(tsStr)
+		// var etime time.Time
+		// if istimestamp {
+		// 	etime = ConvertString2Time(tsStr.(string))
+		// } else {
+		// 	etime = time.UnixMilli(tsStr.(int64))
+		// }
 		etime = etime.AddDate(0, 0, 1)
 		sday = etime.Format("2006-01-02") // 开始时间设置为下一天
 		// fmt.Printf(" 下个开始日期: %s \n", sday)
@@ -1109,6 +1178,10 @@ func GetGM1m(gmcsv string, gmapi string,
 	}
 
 	dapi, _ := GetKbarsHis(gmapi, symbol, "1m", sday, eday, istimestamp, timeoutSeconds)
+
+	// jsonData, _ := json.Marshal(dapi[:5])
+	// fmt.Println(string(jsonData))
+
 	for i := range dapi {
 		// 去掉API数据中的symbol字段
 		dd1 := make(map[string]any, 6)

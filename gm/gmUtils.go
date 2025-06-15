@@ -8,6 +8,112 @@ import (
 	"time"
 )
 
+func ConvertEob2Timestamp(records []map[string]any, istimestamp bool) []map[string]any {
+	// res := make([]map[string]any, len(records))
+	var res []map[string]any
+	for i := range records {
+		dd1 := make(map[string]any, len(records[i]))
+		for k, v := range records[i] {
+			if k == "timestamp" || k == "eob" || k == "trade_date" {
+				key := "timestamp"
+				tstr := v.(string)
+				// tstr = strings.TrimSpace(tstr)
+				// tstr = strings.TrimSuffix(tstr, "+08:00")
+				// tstr = strings.Replace(tstr, "T", " ", 1)
+				tt, err := ParseTimestamp(tstr)
+				if err != nil {
+					continue
+				}
+				if istimestamp {
+					// t, _ := time.Parse("2006-01-02 15:04:05", tstr)
+					// dd1[key] = t.UnixMilli()
+					dd1[key] = tt.UnixMilli()
+				} else {
+					if len(tstr) <= 10 {
+						dd1[key] = tt.Format("2006-01-02")
+					} else {
+						dd1[key] = tt.Format("2006-01-02 15:04:05")
+					}
+					// dd1[key] = tstr
+				}
+			} else {
+				dd1[k] = v
+			}
+		}
+		res = append(res, dd1)
+	}
+	return res
+}
+
+// 把原始数据转换为字典数据
+func ConvertRecords2Dict(records []map[string]any) map[string]any {
+	res := make(map[string]any)
+	// var res map[string]any
+	for i := range records {
+		symbol := records[i]["symbol"].(string)
+		dd1 := make(map[string]any, len(records[i])-1)
+		for k, v := range records[i] {
+			if k == "symbol" {
+				continue
+			}
+			dd1[k] = v
+		}
+		if _, ok := res[symbol]; !ok {
+			res[symbol] = []map[string]any{dd1}
+		} else {
+			res[symbol] = append(res[symbol].([]map[string]any), dd1)
+		}
+		// res[symbol] = append(dd1)
+	}
+	return res
+}
+
+// 把原始数据转换为字典数据
+func ConvertRecords2DictTSString(records []map[string]any) map[string]map[string]any {
+	res := make(map[string]map[string]any)
+	// res := make(map[string]any)
+	// var res map[string]any
+	for i := range records {
+		symbol := records[i]["symbol"].(string)
+		timestamp := records[i]["timestamp"]
+		if res[symbol] == nil {
+			res[symbol] = make(map[string]any)
+		}
+		dd1 := make(map[string]any)
+		for k, v := range records[i] {
+			if k == "symbol" || k == "timestamp" {
+				continue
+			}
+			dd1[k] = v
+		}
+		res[symbol][timestamp.(string)] = dd1
+	}
+	return res
+}
+
+// 把原始数据转换为字典数据
+func ConvertRecords2DictTSInt(records []map[string]any) map[string]map[int64]any {
+	res := make(map[string]map[int64]any)
+	// res := make(map[string]any)
+	// var res map[string]any
+	for i := range records {
+		symbol := records[i]["symbol"].(string)
+		timestamp := records[i]["timestamp"].(int64)
+		if res[symbol] == nil {
+			res[symbol] = make(map[int64]any)
+		}
+		dd1 := make(map[string]any)
+		for k, v := range records[i] {
+			if k == "symbol" || k == "timestamp" {
+				continue
+			}
+			dd1[k] = v
+		}
+		res[symbol][timestamp] = dd1
+	}
+	return res
+}
+
 // 返回字符串的最后n个字符
 func LastNChars(s string, n int) string {
 	runes := []rune(s)
@@ -38,6 +144,7 @@ func ConvertString2Time(s string) time.Time {
 	return tt
 }
 
+// 给定时间戳的开始和结束时间： 00:00:00 和 23:59:59.999999999
 func GetDayStartAndEnd(t time.Time) (time.Time, time.Time) {
 	// 获取给定时间戳的年、月、日和时区
 	year, month, day := t.Date()
@@ -56,6 +163,7 @@ func GetDayStartAndEnd(t time.Time) (time.Time, time.Time) {
 	return startOfDay, endOfDay
 }
 
+// GetDayStart 获取给定时间戳的年、月、日的开始时间： 00:00:00
 func GetDayStart(t time.Time) time.Time {
 	// 获取给定时间戳的年、月、日和时区
 	year, month, day := t.Date()
@@ -67,6 +175,7 @@ func GetDayStart(t time.Time) time.Time {
 	return startOfDay
 }
 
+// GetDayEnd 获取给定时间戳的年、月、日的结束时间： 23:59:59.999999999
 func GetDayEnd(t time.Time) time.Time {
 	// 获取给定时间戳的年、月、日和时区
 	year, month, day := t.Date()
@@ -80,6 +189,15 @@ func GetDayEnd(t time.Time) time.Time {
 	// endOfDay := nextDayStart.Add(-time.Nanosecond)
 
 	return endOfDay
+}
+
+// 辅助函数：从字符串解析日期
+func ParseDate(dateStr string) (*time.Time, error) {
+	t, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
 }
 
 // ParseTimestamp 解析各种格式的时间戳

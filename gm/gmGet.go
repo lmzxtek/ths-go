@@ -182,73 +182,6 @@ func GetTest2(url string, timeoutSeconds int) ([]byte, error) {
 	return resp, nil
 }
 
-// GetTradingDays 返回交易日历
-// startDate和endDate可以为nil，表示使用默认值
-// region: "us"(美国), "cn"(中国), ""(无节假日)
-// func GetTradingDays(startDate, endDate *time.Time, region string) []string {
-// 	now := time.Now()
-
-// 	// 设置默认开始日期为当年1月1日
-// 	var start time.Time
-// 	if startDate == nil {
-// 		start = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, time.Local)
-// 	} else {
-// 		start = *startDate
-// 	}
-
-// 	// 设置默认结束日期为当年12月31日
-// 	var end time.Time
-// 	if endDate == nil {
-// 		end = time.Date(now.Year(), 12, 31, 0, 0, 0, 0, time.Local)
-// 	} else {
-// 		end = *endDate
-// 	}
-
-// 	// 创建日历实例
-// 	c := cal.NewCalendar()
-
-// 	// 根据地区添加节假日
-// 	switch region {
-// 	case "us":
-// 		cal.UnitedStates.AddTo(c)
-// 	case "cn":
-// 		cal.China.AddTo(c)
-// 	}
-
-// 	var tradingDays []string
-// 	current := start
-
-// 	// 遍历日期范围
-// 	for !current.After(end) {
-// 		// 排除周末和节假日
-// 		if c.IsWorkday(current) {
-// 			tradingDays = append(tradingDays, current.Format("2006-01-02"))
-// 		}
-// 		current = current.AddDate(0, 0, 1)
-// 	}
-
-// 	return tradingDays
-// }
-
-// 可用的地区代码 (部分)
-// us - 美国节假日
-// cn - 中国节假日
-// ca - 加拿大节假日
-// gb - 英国节假日
-// de - 德国节假日
-// jp - 日本节假日
-// au - 澳大利亚节假日
-// 更多地区请参考: https://github.com/rickar/cal
-
-// 辅助函数：从字符串解析日期
-func ParseDate(dateStr string) (*time.Time, error) {
-	t, err := time.Parse("2006-01-02", dateStr)
-	if err != nil {
-		return nil, err
-	}
-	return &t, nil
-}
-
 // 获取交易日历
 func GetCalendar(gmapi string, syear string, eyear string, exchange string, timeoutSeconds int) ([]byte, error) {
 	url := fmt.Sprintf("%s/get_dates_by_year", gmapi)
@@ -383,115 +316,612 @@ func GetCurrent(gmapi string, symbols string, timeoutSeconds int, split bool) ([
 	// 将获取到的字符串数据解析为 JSON 格式
 	var data []any
 	if err = json.Unmarshal(rawData, &data); err != nil {
-		return nil, fmt.Errorf("解析 JSON 数据失败(GetCurrentByte()): %v", err)
+		return nil, fmt.Errorf("解析 JSON 数据失败(GetCurrent()): %v", err)
 	}
 	return data, nil
 }
 
-func ConvertEob2Timestamp(records []map[string]any, istimestamp bool) []map[string]any {
-	// res := make([]map[string]any, len(records))
-	var res []map[string]any
-	for i := range records {
-		dd1 := make(map[string]any, len(records[i]))
-		for k, v := range records[i] {
-			if k == "timestamp" || k == "eob" || k == "trade_date" {
-				key := "timestamp"
-				tstr := v.(string)
-				// tstr = strings.TrimSpace(tstr)
-				// tstr = strings.TrimSuffix(tstr, "+08:00")
-				// tstr = strings.Replace(tstr, "T", " ", 1)
-				tt, err := ParseTimestamp(tstr)
-				if err != nil {
-					continue
-				}
-				if istimestamp {
-					// t, _ := time.Parse("2006-01-02 15:04:05", tstr)
-					// dd1[key] = t.UnixMilli()
-					dd1[key] = tt.UnixMilli()
-				} else {
-					if len(tstr) <= 10 {
-						dd1[key] = tt.Format("2006-01-02")
-					} else {
-						dd1[key] = tt.Format("2006-01-02 15:04:05")
-					}
-					// dd1[key] = tstr
-				}
-			} else {
-				dd1[k] = v
-			}
-		}
-		res = append(res, dd1)
+// 请求市场个股列表(gm-api)
+// 输入参数：
+//   - exchange: 交易所代码: SHSE,SZSE,CFFEX,DCE,CZCE,SHFE,INE
+//   - sec: 证券类型代码, 如 "stock"、"fund"、"index"
+//
+// 返回值：
+//   - 市场个股列表
+func GetMarketInfo(gmapi string,
+	symbols string, sec string, exchange string,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	url := fmt.Sprintf("%s/get_infos", gmapi)
+	params := map[string]string{
+		"split": "true",
 	}
-	return res
+
+	if exchange != "" {
+		params["exchange"] = exchange
+	}
+	if symbols != "" {
+		params["symbols"] = symbols
+	}
+	if sec != "" {
+		params["sec"] = sec
+	}
+
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(GetMarketInfo()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(GetMarketInfo()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, false), nil
 }
 
-// 把原始数据转换为字典数据
-func ConvertRecords2Dict(records []map[string]any) map[string]any {
-	res := make(map[string]any)
-	// var res map[string]any
-	for i := range records {
-		symbol := records[i]["symbol"].(string)
-		dd1 := make(map[string]any, len(records[i])-1)
-		for k, v := range records[i] {
-			if k == "symbol" {
-				continue
-			}
-			dd1[k] = v
-		}
-		if _, ok := res[symbol]; !ok {
-			res[symbol] = []map[string]any{dd1}
-		} else {
-			res[symbol] = append(res[symbol].([]map[string]any), dd1)
-		}
-		// res[symbol] = append(dd1)
+// 请求市场股票列表某交易日的交易数据(gm-api)
+// 输入参数：
+//   - exchange: 交易所代码: SHSE,SZSE,CFFEX,DCE,CZCE,SHFE,INE
+//   - sec: 证券类型代码, 如 "stock"、"fund"、"index"
+//
+// 返回值：
+//   - 市场个股列表
+func GetSymbolsInfo(gmapi string,
+	symbols string, sec string, exchange string, trade_date string,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	url := fmt.Sprintf("%s/get_symbols", gmapi)
+	params := map[string]string{
+		"split": "true",
 	}
-	return res
+
+	if exchange != "" {
+		params["exchange"] = exchange
+	}
+	if symbols != "" {
+		params["symbols"] = symbols
+	}
+	if sec != "" {
+		params["sec"] = sec
+	}
+	if trade_date != "" {
+		params["trade_date"] = trade_date
+	}
+
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(GetSymbolsInfo()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(GetSymbolsInfo()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, false), nil
 }
 
-// 把原始数据转换为字典数据
-func ConvertRecords2DictTSString(records []map[string]any) map[string]map[string]any {
-	res := make(map[string]map[string]any)
-	// res := make(map[string]any)
-	// var res map[string]any
-	for i := range records {
-		symbol := records[i]["symbol"].(string)
-		timestamp := records[i]["timestamp"]
-		if res[symbol] == nil {
-			res[symbol] = make(map[string]any)
-		}
-		dd1 := make(map[string]any)
-		for k, v := range records[i] {
-			if k == "symbol" || k == "timestamp" {
-				continue
-			}
-			dd1[k] = v
-		}
-		res[symbol][timestamp.(string)] = dd1
+// 查询个股估值指标每日数据
+// 输入参数：
+//   - sdate: 开始日期, 格式: "2021-01-01"
+//   - edate: 结束日期, 格式: "2021-01-01"
+//   - symbol: 股票代码, 如 "SHSE.601088"
+func GetDailyValuation(gmapi string,
+	symbol string, sdate string, edate string, fields string,
+	timeoutSeconds int) ([]map[string]any, error) {
+	if symbol == "" {
+		return nil, fmt.Errorf("Symbol为必须字段")
 	}
-	return res
+
+	url := fmt.Sprintf("%s/get_daily_valuation", gmapi)
+	params := map[string]string{
+		"symbol": symbol,
+		"split":  "true",
+	}
+
+	if sdate != "" {
+		params["sdate"] = sdate
+	}
+	if edate != "" {
+		params["edate"] = edate
+	}
+	if fields != "" {
+		params["fields"] = fields
+	}
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(get_daily_valuation()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(get_daily_valuation()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, false), nil
 }
 
-// 把原始数据转换为字典数据
-func ConvertRecords2DictTSInt(records []map[string]any) map[string]map[int64]any {
-	res := make(map[string]map[int64]any)
-	// res := make(map[string]any)
-	// var res map[string]any
-	for i := range records {
-		symbol := records[i]["symbol"].(string)
-		timestamp := records[i]["timestamp"].(int64)
-		if res[symbol] == nil {
-			res[symbol] = make(map[int64]any)
-		}
-		dd1 := make(map[string]any)
-		for k, v := range records[i] {
-			if k == "symbol" || k == "timestamp" {
-				continue
-			}
-			dd1[k] = v
-		}
-		res[symbol][timestamp] = dd1
+// 查询个股基础指标每日数据
+// 输入参数：
+//   - sdate: 开始日期, 格式: "2021-01-01"
+//   - edate: 结束日期, 格式: "2021-01-01"
+//   - symbol: 股票代码, 如 "SHSE.601088"
+func GetDailyBasic(gmapi string,
+	symbol string, sdate string, edate string, fields string,
+	timeoutSeconds int) ([]map[string]any, error) {
+	if symbol == "" {
+		return nil, fmt.Errorf("Symbol为必须字段")
 	}
-	return res
+
+	url := fmt.Sprintf("%s/get_daily_basic", gmapi)
+	params := map[string]string{
+		"symbol": symbol,
+		"split":  "true",
+	}
+
+	if sdate != "" {
+		params["sdate"] = sdate
+	}
+	if edate != "" {
+		params["edate"] = edate
+	}
+	if fields != "" {
+		params["fields"] = fields
+	}
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(get_daily_basic()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(get_daily_basic()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, false), nil
+}
+
+// 查询个股市值指标每日数据
+// 输入参数：
+//   - sdate: 开始日期, 格式: "2021-01-01"
+//   - edate: 结束日期, 格式: "2021-01-01"
+//   - symbol: 股票代码, 如 "SHSE.601088"
+func GetDailyMktvalue(gmapi string,
+	symbol string, sdate string, edate string, fields string,
+	timeoutSeconds int) ([]map[string]any, error) {
+	if symbol == "" {
+		return nil, fmt.Errorf("Symbol为必须字段")
+	}
+
+	url := fmt.Sprintf("%s/get_daily_mktvalue", gmapi)
+	params := map[string]string{
+		"symbol": symbol,
+		"split":  "true",
+	}
+
+	if sdate != "" {
+		params["sdate"] = sdate
+	}
+	if edate != "" {
+		params["edate"] = edate
+	}
+	if fields != "" {
+		params["fields"] = fields
+	}
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(get_daily_mktvalue()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(get_daily_mktvalue()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, false), nil
+}
+
+// 查询财务主要指标
+// 输入参数：
+//   - sdate: 开始日期, 格式: "2021-01-01"
+//   - edate: 结束日期, 格式: "2021-01-01"
+//   - symbol: 股票代码, 如 "SHSE.601088"
+//   - fields: fields不能超过20个字段
+//   - rpt_type: 按报告期查询可指定以下报表类型： 1-一季度报; 6-中报; 9-前三季报; 12-年报 默认None为不限
+//   - data_type: 在发布原始财务报告以后，上市公司可能会对数据进行修正。 101-合并原始; 102-合并调整; 201-母公司原始; 202-母公司调整 默认None返回当期合并调整，如果没有调整返回合并原始
+func GetFinancePrime(gmapi string,
+	symbol string, sdate string, edate string, fields string,
+	rpt_type string, data_type string,
+	timeoutSeconds int) ([]map[string]any, error) {
+	if symbol == "" {
+		return nil, fmt.Errorf("Symbol为必须字段")
+	}
+
+	url := fmt.Sprintf("%s/get_finance_prime", gmapi)
+	params := map[string]string{
+		"symbol": symbol,
+		"split":  "true",
+	}
+
+	if sdate != "" {
+		params["sdate"] = sdate
+	}
+	if edate != "" {
+		params["edate"] = edate
+	}
+	if rpt_type != "" {
+		params["rpt_type"] = rpt_type
+	}
+	if data_type != "" {
+		params["data_type"] = data_type
+	}
+	if fields != "" {
+		params["fields"] = fields
+	}
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(get_finance_prime()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(get_finance_prime()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, false), nil
+}
+
+// 查询财务衍生指标
+// 输入参数：
+//   - sdate: 开始日期, 格式: "2021-01-01"
+//   - edate: 结束日期, 格式: "2021-01-01"
+//   - symbol: 股票代码, 如 "SHSE.601088"
+//   - fields: fields不能超过20个字段
+//   - rpt_type: 按报告期查询可指定以下报表类型： 1-一季度报; 6-中报; 9-前三季报; 12-年报 默认None为不限
+//   - data_type: 在发布原始财务报告以后，上市公司可能会对数据进行修正。 101-合并原始; 102-合并调整; 201-母公司原始; 202-母公司调整 默认None返回当期合并调整，如果没有调整返回合并原始
+func GetFinanceDeriv(gmapi string,
+	symbol string, sdate string, edate string, fields string,
+	rpt_type string, data_type string,
+	timeoutSeconds int) ([]map[string]any, error) {
+	if symbol == "" {
+		return nil, fmt.Errorf("Symbol为必须字段")
+	}
+
+	url := fmt.Sprintf("%s/get_finance_deriv", gmapi)
+	params := map[string]string{
+		"symbol": symbol,
+		"split":  "true",
+	}
+
+	if sdate != "" {
+		params["sdate"] = sdate
+	}
+	if edate != "" {
+		params["edate"] = edate
+	}
+	if rpt_type != "" {
+		params["rpt_type"] = rpt_type
+	}
+	if data_type != "" {
+		params["data_type"] = data_type
+	}
+	if fields != "" {
+		params["fields"] = fields
+	}
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(get_finance_deriv()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(get_finance_deriv()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, false), nil
+}
+
+// 查询财务主要指标单日截面数据(point-in-time, 多标的)
+// 输入参数：
+//   - date: 交易日期, 格式: "2021-01-01"
+//   - fields: fields不能超过20个字段
+//   - rpt_type: 按报告期查询可指定以下报表类型： 1-一季度报; 6-中报; 9-前三季报; 12-年报 默认None为不限
+//   - data_type: 在发布原始财务报告以后，上市公司可能会对数据进行修正。 101-合并原始; 102-合并调整; 201-母公司原始; 202-母公司调整 默认None返回当期合并调整，如果没有调整返回合并原始
+//   - symbols: 股票列表, 如 "SHSE.601088,SZSE.000001"
+func GetFinancePrimePt(gmapi string,
+	symbols string, date string, fields string,
+	rpt_type string, data_type string,
+	timeoutSeconds int) ([]map[string]any, error) {
+	if symbols == "" {
+		return nil, fmt.Errorf("Symbols为必须字段")
+	}
+
+	url := fmt.Sprintf("%s/get_finance_prime_pt", gmapi)
+	params := map[string]string{
+		"symbols": symbols,
+		"split":   "true",
+	}
+
+	if date != "" {
+		params["date"] = date
+	}
+	if rpt_type != "" {
+		params["rpt_type"] = rpt_type
+	}
+	if data_type != "" {
+		params["data_type"] = data_type
+	}
+	if fields != "" {
+		params["fields"] = fields
+	}
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(get_finance_prime_pt()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(get_finance_prime_pt()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, false), nil
+}
+
+// 查询财务主要指标单日截面数据(point-in-time, 多标的)
+// 输入参数：
+//   - date: 交易日期, 格式: "2021-01-01"
+//   - fields: fields不能超过20个字段
+//   - rpt_type: 按报告期查询可指定以下报表类型： 1-一季度报; 6-中报; 9-前三季报; 12-年报 默认None为不限
+//   - data_type: 在发布原始财务报告以后，上市公司可能会对数据进行修正。 101-合并原始; 102-合并调整; 201-母公司原始; 202-母公司调整 默认None返回当期合并调整，如果没有调整返回合并原始
+//   - symbols: 股票列表, 如 "SHSE.601088,SZSE.000001"
+func GetFinanceDerivPt(gmapi string,
+	symbols string, date string, fields string,
+	rpt_type string, data_type string,
+	timeoutSeconds int) ([]map[string]any, error) {
+	if symbols == "" {
+		return nil, fmt.Errorf("Symbols为必须字段")
+	}
+
+	url := fmt.Sprintf("%s/get_finance_deriv_pt", gmapi)
+	params := map[string]string{
+		"symbols": symbols,
+		"split":   "true",
+	}
+
+	if date != "" {
+		params["date"] = date
+	}
+	if rpt_type != "" {
+		params["rpt_type"] = rpt_type
+	}
+	if data_type != "" {
+		params["data_type"] = data_type
+	}
+	if fields != "" {
+		params["fields"] = fields
+	}
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(get_finance_deriv_pt()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(get_finance_deriv_pt()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, false), nil
+}
+
+// 查询估值指标单日截面数据(point-in-time, 多标的)
+// 输入参数：
+//   - date: 交易日期, 格式: "2021-01-01"
+//   - symbols: 股票列表, 如 "SHSE.601088,SZSE.000001"
+func GetDailyBasicPt(gmapi string,
+	symbols string, date string, fields string,
+	timeoutSeconds int) ([]map[string]any, error) {
+	if symbols == "" {
+		return nil, fmt.Errorf("Symbols为必须字段")
+	}
+
+	url := fmt.Sprintf("%s/get_daily_basic_pt", gmapi)
+	params := map[string]string{
+		"symbols": symbols,
+		"split":   "true",
+	}
+
+	if date != "" {
+		params["date"] = date
+	}
+	if fields != "" {
+		params["fields"] = fields
+	}
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(get_daily_basic_pt()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(get_daily_basic_pt()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, false), nil
+}
+
+// 查询估值指标单日截面数据(point-in-time, 多标的)
+// 输入参数：
+//   - date: 交易日期, 格式: "2021-01-01"
+//   - symbols: 股票列表, 如 "SHSE.601088,SZSE.000001"
+func GetDailyMktvaluePt(gmapi string,
+	symbols string, date string, fields string,
+	timeoutSeconds int) ([]map[string]any, error) {
+	if symbols == "" {
+		return nil, fmt.Errorf("Symbols为必须字段")
+	}
+
+	url := fmt.Sprintf("%s/get_daily_mktvalue_pt", gmapi)
+	params := map[string]string{
+		"symbols": symbols,
+		"split":   "true",
+	}
+
+	if date != "" {
+		params["date"] = date
+	}
+	if fields != "" {
+		params["fields"] = fields
+	}
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(get_daily_mktvalue_pt()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(get_daily_mktvalue_pt()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, false), nil
+}
+
+// 查询估值指标单日截面数据(point-in-time, 多标的)
+// 输入参数：
+//   - date: 交易日期, 格式: "2021-01-01"
+//   - symbols: 股票列表, 如 "SHSE.601088,SZSE.000001"
+func GetDailyValuationPt(gmapi string,
+	symbols string, date string, fields string,
+	timeoutSeconds int) ([]map[string]any, error) {
+	if symbols == "" {
+		return nil, fmt.Errorf("Symbols为必须字段")
+	}
+
+	url := fmt.Sprintf("%s/get_daily_valuation_pt", gmapi)
+	params := map[string]string{
+		"symbols": symbols,
+		"split":   "true",
+	}
+
+	if date != "" {
+		params["date"] = date
+	}
+	if fields != "" {
+		params["fields"] = fields
+	}
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(get_daily_valuation_pt()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(get_daily_valuation_pt()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, false), nil
+}
+
+// 请求个股历史交易段的个股信息(gm-api)
+// 输入参数：
+//   - sdate: 开始日期, 格式: "2021-01-01"
+//   - edate: 结束日期, 格式: "2021-01-01"
+//   - symbol: 股票代码, 如 "SHSE.601088"
+func GetHistoryInfo(gmapi string,
+	symbol string, sdate string, edate string,
+	timeoutSeconds int) ([]map[string]any, error) {
+	if symbol == "" {
+		return nil, fmt.Errorf("Symbol为必须字段")
+	}
+
+	url := fmt.Sprintf("%s/get_his_symbol", gmapi)
+	params := map[string]string{
+		"symbol": symbol,
+		"split":  "true",
+	}
+
+	if sdate != "" {
+		params["sdate"] = sdate
+	}
+	if edate != "" {
+		params["edate"] = edate
+	}
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(GetHistoryInfo()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(GetKbarsHisByte()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, false), nil
 }
 
 // 获取K线行情数据
@@ -674,6 +1104,31 @@ func downloadAndReadData(url string) ([]byte, error) {
 	return data, nil
 }
 
+// parseValue attempts to convert a string value to its appropriate Go type.
+func parseValue(s string) any {
+	// Try parsing as integer
+	if i, err := strconv.ParseInt(s, 10, 64); err == nil {
+		return i
+	}
+
+	// Try parsing as float
+	if f, err := strconv.ParseFloat(s, 64); err == nil {
+		return f
+	}
+
+	// Try parsing as boolean (case-insensitive)
+	lowerS := strings.ToLower(s)
+	if lowerS == "true" {
+		return true
+	}
+	if lowerS == "false" {
+		return false
+	}
+
+	// If none of the above, return as string
+	return s
+}
+
 // csvToJSON 将CSV数据转换为JSON格式(不进行类型判断)
 func CsvToJSON(csvData []byte) ([]byte, error) {
 	// 创建CSV读取器
@@ -712,31 +1167,6 @@ func CsvToJSON(csvData []byte) ([]byte, error) {
 	}
 
 	return jsonData, nil
-}
-
-// parseValue attempts to convert a string value to its appropriate Go type.
-func parseValue(s string) any {
-	// Try parsing as integer
-	if i, err := strconv.ParseInt(s, 10, 64); err == nil {
-		return i
-	}
-
-	// Try parsing as float
-	if f, err := strconv.ParseFloat(s, 64); err == nil {
-		return f
-	}
-
-	// Try parsing as boolean (case-insensitive)
-	lowerS := strings.ToLower(s)
-	if lowerS == "true" {
-		return true
-	}
-	if lowerS == "false" {
-		return false
-	}
-
-	// If none of the above, return as string
-	return s
 }
 
 func CSVToRecords(csvData []byte, istimestamp bool, tskey string) ([]map[string]any, error) {

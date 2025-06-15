@@ -59,6 +59,10 @@ func main() {
 	r.GET("/calendar", srv.RouteCalendar)
 	r.GET("/calendar2", srv.RouteCalendar2)
 
+	r.GET("/marketinfo", srv.RouteMarketInfo)
+	r.GET("/symbolsinfo", srv.RouteSymbolsInfo)
+	r.GET("/historyinfo", srv.RouteHistoryInfo)
+
 	addr := fmt.Sprintf(":%d", cfg.API.Port)
 	fmt.Printf("\nServer running at http://*%s\n\n", addr)
 	r.Run(addr)

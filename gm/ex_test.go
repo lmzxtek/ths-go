@@ -923,11 +923,11 @@ func TestGetGM1m(t *testing.T) {
 	// fmt.Println(rsp[:5])
 }
 
-func TestGetKbars(t *testing.T) {
+func TestGetKbarsByte(t *testing.T) {
 	fmt.Println(" -=> Start fetch kbars history data using GM-api ... ")
 
 	url := gmURL
-	timeoutSeconds := 10
+	timeoutSeconds := 30
 
 	// symbols := "SHSE.601088,SZSE.300917"
 	symbols := "SHSE.601088"
@@ -964,6 +964,193 @@ func TestGetKbars(t *testing.T) {
 			fmt.Printf("%s\n", recordsJSON)
 		}
 	}
+}
+
+func TestGetKbars2(t *testing.T) {
+	fmt.Println(" -=> Start fetch kbars history data using GM-api ... ")
+
+	url := gmURL
+	timeoutSeconds := 30
+
+	// symbols := "SHSE.601088,SZSE.300917"
+	symbols := "SHSE.601088"
+	sdate := "2025-05-01"
+	// sdate = "2025-05-29"
+	edate := "2025-05-29"
+	tag := "1d"
+	// tag := "1m"
+	ists := true
+	ists = false
+
+	resp, err := GetKbarsHis(url, symbols, tag, sdate, edate, ists, timeoutSeconds)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	recordsJSON, _ := json.MarshalIndent(resp[max(0, len(resp)-3):], "", "  ") // 格式化输出 JSON
+	// fmt.Printf("%s\n", recordsJSON)
+	fmt.Println(string(recordsJSON))
+	// fmt.Println(resp[:5])
+}
+
+func TestGetFinance(t *testing.T) {
+	fmt.Println(" -=> Start fetch data using GM-api ... ")
+
+	url := gmURL
+	timeoutSeconds := 30
+
+	// symbols := "SHSE.601088,SZSE.300917"
+	symbols := "SHSE.601088"
+	sdate := "2024-05-01"
+	// sdate = "2025-05-29"
+	edate := "2025-05-29"
+	rpt_type := "12"
+	data_type := "101"
+
+	// resp, err := GetFinancePrime(url, symbols, sdate, edate, "", rpt_type, data_type, timeoutSeconds)
+	resp, err := GetFinanceDeriv(url, symbols, sdate, edate, "", rpt_type, data_type, timeoutSeconds)
+
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	recordsJSON, _ := json.MarshalIndent(resp[max(0, len(resp)-3):], "", "  ") // 格式化输出 JSON
+	// fmt.Printf("%s\n", recordsJSON)
+	fmt.Println(string(recordsJSON))
+	// fmt.Println(resp[:5])
+}
+
+func TestGetFinancePt(t *testing.T) {
+	fmt.Println(" -=> Start fetch data using GM-api ... ")
+
+	url := gmURL
+	timeoutSeconds := 10
+
+	symbols := "SHSE.601088,SZSE.300917"
+	// symbols := "SHSE.601088"
+	sdate := "2025-06-03"
+	// sdate = "2025-05-29"
+	// edate := "2025-05-29"
+	rpt_type := "12"
+	data_type := "101"
+
+	// resp, err := GetFinancePrimePt(url, symbols, sdate, "", rpt_type, data_type, timeoutSeconds)
+	resp, err := GetFinanceDerivPt(url, symbols, sdate, "", rpt_type, data_type, timeoutSeconds)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	recordsJSON, _ := json.MarshalIndent(resp[max(0, len(resp)-3):], "", "  ") // 格式化输出 JSON
+	// fmt.Printf("%s\n", recordsJSON)
+	fmt.Println(string(recordsJSON))
+	// fmt.Println(resp[:5])
+}
+
+func TestGetDaily(t *testing.T) {
+	fmt.Println(" -=> Start fetch data using GM-api ... ")
+
+	url := gmURL
+	timeoutSeconds := 30
+
+	// symbols := "SHSE.601088,SZSE.300917"
+	symbols := "SHSE.601088"
+	sdate := "2025-05-01"
+	// sdate = "2025-05-29"
+	edate := "2025-05-29"
+
+	// resp, err := GetDailyValuation(url, symbols, sdate, edate, "", timeoutSeconds)
+	// resp, err := GetDailyMktvalue(url, symbols, sdate, edate, "", timeoutSeconds)
+	resp, err := GetDailyBasic(url, symbols, sdate, edate, "", timeoutSeconds)
+
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	recordsJSON, _ := json.MarshalIndent(resp[max(0, len(resp)-3):], "", "  ") // 格式化输出 JSON
+	// fmt.Printf("%s\n", recordsJSON)
+	fmt.Println(string(recordsJSON))
+	// fmt.Println(resp[:5])
+}
+
+func TestGetDailyPt(t *testing.T) {
+	fmt.Println(" -=> Start fetch data using GM-api ... ")
+
+	url := gmURL
+	timeoutSeconds := 10
+
+	symbols := "SHSE.601088,SZSE.300917"
+	// symbols := "SHSE.601088"
+	sdate := "2025-06-03"
+	// sdate = "2025-05-29"
+	// edate := "2025-05-29"
+
+	// resp, err := GetDailyValuationPt(url, symbols, sdate, "", timeoutSeconds)
+	resp, err := GetDailyMktvaluePt(url, symbols, sdate, "", timeoutSeconds)
+	// resp, err := GetDailyBasicPt(url, symbols, sdate, "", timeoutSeconds)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	recordsJSON, _ := json.MarshalIndent(resp[max(0, len(resp)-3):], "", "  ") // 格式化输出 JSON
+	// fmt.Printf("%s\n", recordsJSON)
+	fmt.Println(string(recordsJSON))
+	// fmt.Println(resp[:5])
+}
+
+func TestGetMarketInfo(t *testing.T) {
+	fmt.Println(" -=> Start fetch data using GM-api ... ")
+
+	url := gmURL
+	timeoutSeconds := 10
+
+	symbols := "SHSE.601088,SZSE.300917"
+	// symbols = "SHSE.601088"
+	// symbols = ""
+	sec := "stock"
+	exchange := "SHSE,SZSE"
+
+	resp, err := GetMarketInfo(url, symbols, sec, exchange, timeoutSeconds)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	recordsJSON, _ := json.MarshalIndent(resp[max(0, len(resp)-3):], "", "  ") // 格式化输出 JSON
+	fmt.Println(string(recordsJSON))
+}
+
+func TestGetSymbolsInfo(t *testing.T) {
+	fmt.Println(" -=> Start fetch data using GM-api ... ")
+
+	url := gmURL
+	timeoutSeconds := 30
+
+	symbols := "SHSE.601088,SZSE.300917"
+	// symbols = "SHSE.601088"
+	// symbols = ""
+	sec := "stock"
+	exchange := "SHSE,SZSE"
+	trade_date := "2025-05-29"
+
+	resp, err := GetSymbolsInfo(url, symbols, sec, exchange, trade_date, timeoutSeconds)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	recordsJSON, _ := json.MarshalIndent(resp[max(0, len(resp)-3):], "", "  ") // 格式化输出 JSON
+	fmt.Println(string(recordsJSON))
+}
+
+func TestGetHistoryInfo(t *testing.T) {
+	fmt.Println(" -=> Start fetch data using GM-api ... ")
+
+	url := gmURL
+	timeoutSeconds := 30
+
+	// symbols := "SHSE.601088,SZSE.300917"
+	// symbols = ""
+	symbol := "SHSE.601088"
+	sdate := "2025-06-01"
+	edate := "2025-06-15"
+
+	resp, err := GetHistoryInfo(url, symbol, sdate, edate, timeoutSeconds)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	recordsJSON, _ := json.MarshalIndent(resp[max(0, len(resp)-3):], "", "  ") // 格式化输出 JSON
+	fmt.Println(string(recordsJSON))
 }
 
 func TestConvertTimestamp(t *testing.T) {

@@ -157,7 +157,7 @@ func RouteCalendar2(c *gin.Context) {
 	if exchange != "" {
 		pars["exchange"] = exchange
 	}
-	rawData, err := GetURLWithoutRetry(url, pars, 10*time.Second, 0)
+	rawData, err := GetURLWithoutRetry(url, pars, 30*time.Second, 0)
 	if err != nil {
 		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error()})
 		return
@@ -195,7 +195,7 @@ func RouteCalendar(c *gin.Context) {
 	syear := c.DefaultQuery("syear", yy)
 	eyear := c.DefaultQuery("eyear", yy)
 	exchange := c.DefaultQuery("exchange", "")
-	timeoutSeconds := 10
+	timeoutSeconds := 30
 
 	rawData, err := gm.GetCalendar(gmapi, syear, eyear, exchange, timeoutSeconds)
 	if err != nil {
@@ -239,7 +239,7 @@ func RouteDatesPrevN(c *gin.Context) {
 		isinclude = false
 	}
 
-	timeoutSeconds := 10
+	timeoutSeconds := 30
 	// rawData, err := gm.GetPrevNByte(gmapi, date, count, timeoutSeconds, isinclude)
 	rawData, err := gm.GetPrevN(gmapi, date, count, timeoutSeconds, isinclude)
 	if err != nil {
@@ -269,7 +269,7 @@ func RouteDatesNextN(c *gin.Context) {
 		isinclude = false
 	}
 
-	timeoutSeconds := 10
+	timeoutSeconds := 30
 	// rawData, err := gm.GetNextNByte(gmapi, date, count, timeoutSeconds, isinclude)
 	rawData, err := gm.GetNextN(gmapi, date, count, timeoutSeconds, isinclude)
 	if err != nil {
@@ -292,7 +292,7 @@ func RouteCurrent(c *gin.Context) {
 		issplit = true
 	}
 
-	timeoutSeconds := 10
+	timeoutSeconds := 30
 
 	// rawData, err := gm.GetCurrentByte(gmapi, symbols, timeoutSeconds, issplit)
 	rawData, err := gm.GetCurrent(gmapi, symbols, timeoutSeconds, issplit)
@@ -312,6 +312,71 @@ func RouteCurrent(c *gin.Context) {
 	// c.JSON(http.StatusOK, records)
 }
 
+func RouteMarketInfo(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	// if symbols == "" {
+	// 	c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+	// 	return
+	// }
+
+	// today := time.Now().Format("2006-01-02")
+	// sdate := c.DefaultQuery("sdate", today)
+	// edate := c.DefaultQuery("edate", today)
+	sec := c.DefaultQuery("sec", "stock")
+	exchange := c.DefaultQuery("exchange", "")
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetMarketInfo(gmapi, symbols, sec, exchange, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetMarketInfo)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteSymbolsInfo(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	// if symbols == "" {
+	// 	c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+	// 	return
+	// }
+
+	// today := time.Now().Format("2006-01-02")
+	// sdate := c.DefaultQuery("sdate", today)
+	// edate := c.DefaultQuery("edate", today)
+	sec := c.DefaultQuery("sec", "stock")
+	exchange := c.DefaultQuery("exchange", "")
+	trade_date := c.DefaultQuery("trade_date", "")
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetSymbolsInfo(gmapi, symbols, sec, exchange, trade_date, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetSymbolsInfo)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteHistoryInfo(c *gin.Context) {
+	symbol := c.DefaultQuery("symbol", "")
+	if symbol == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须"))
+		return
+	}
+
+	today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", today)
+	edate := c.DefaultQuery("edate", today)
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetHistoryInfo(gmapi, symbol, sdate, edate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetKbarsHis)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
 func RouteKbars(c *gin.Context) {
 	symbols := c.DefaultQuery("symbols", "")
 	if symbols == "" {
@@ -324,7 +389,7 @@ func RouteKbars(c *gin.Context) {
 	edate := c.DefaultQuery("edate", today)
 	tag := c.DefaultQuery("tag", "1m")
 	timestamp := c.DefaultQuery("timestamp", "false")
-	timeoutSeconds := 10
+	timeoutSeconds := 30
 
 	istimestamp := false
 	if timestamp == "true" {
@@ -366,7 +431,7 @@ func RouteKBDict(c *gin.Context) {
 	edate := c.DefaultQuery("edate", today)
 	tag := c.DefaultQuery("tag", "1m")
 	timestamp := c.DefaultQuery("timestamp", "false")
-	timeoutSeconds := 10
+	timeoutSeconds := 30
 
 	istimestamp := false
 	if timestamp == "true" {
@@ -394,7 +459,7 @@ func RouteKBDictTS(c *gin.Context) {
 	edate := c.DefaultQuery("edate", today)
 	tag := c.DefaultQuery("tag", "1m")
 	timestamp := c.DefaultQuery("timestamp", "false")
-	timeoutSeconds := 10
+	timeoutSeconds := 30
 
 	istimestamp := false
 	if timestamp == "true" {
@@ -426,7 +491,7 @@ func RouteKbarsN(c *gin.Context) {
 	count := c.DefaultQuery("count", "")
 	tag := c.DefaultQuery("tag", "1d")
 	timestamp := c.DefaultQuery("timestamp", "false")
-	timeoutSeconds := 10
+	timeoutSeconds := 30
 
 	istimestamp := false
 	if timestamp == "true" {
@@ -449,7 +514,7 @@ func RouteCSVxzMonth(c *gin.Context) {
 		return
 	}
 
-	timeoutSeconds := 10
+	timeoutSeconds := 30
 	now := time.Now()
 	year, month, _ := now.Date()
 	yearStr := fmt.Sprintf("%d", year)
@@ -491,7 +556,7 @@ func RouteCSVxzYear(c *gin.Context) {
 		return
 	}
 
-	timeoutSeconds := 10
+	timeoutSeconds := 30
 	now := time.Now()
 	year := now.Year()
 	yearStr := fmt.Sprintf("%d", year)
@@ -535,7 +600,7 @@ func RouteCSVxz1m(c *gin.Context) {
 		return
 	}
 
-	timeoutSeconds := 10
+	timeoutSeconds := 30
 	now := time.Now()
 	today := now.Format("2006-01-02")
 
@@ -578,7 +643,7 @@ func RouteCSVxzTag(c *gin.Context) {
 		return
 	}
 
-	timeoutSeconds := 10
+	timeoutSeconds := 30
 	now := time.Now()
 	today := now.Format("2006-01-02")
 
@@ -613,7 +678,7 @@ func RouteGM1m(c *gin.Context) {
 		return
 	}
 
-	timeoutSeconds := 10
+	timeoutSeconds := 30
 	now := time.Now()
 	today := now.Format("2006-01-02")
 	prday := now.AddDate(0, 0, -1)

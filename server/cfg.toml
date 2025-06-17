@@ -1,4 +1,5 @@
 [api]
 port = 5003
-gmapi = "https://localhost:5000"
-gmcsv = "https://localhost:5002"
+server_tag = "GMApi"
+gmapi = "localhost:5000"
+gmcsv = "localhost:5002"

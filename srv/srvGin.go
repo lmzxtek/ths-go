@@ -33,6 +33,14 @@ func SetURL(gmAPI, gmCSV string) {
 	}
 }
 
+var serverTag string = "/api"
+
+func SetServerTag(srvtag string) {
+	if srvtag != "" {
+		serverTag = srvtag
+	}
+}
+
 // RandomStock 从预定义的股票代码数组中随机返回一个元素
 func randomStock() string {
 	stocks := []string{"AAPL", "GOOG", "AMZN", "MSFT", "TSLA"}
@@ -60,6 +68,124 @@ func randomDateInLastYear() string {
 	randomTime := time.Unix(randomUnix, 0)
 	// 格式化随机时间为 "YYYY-MM-DD" 格式
 	return randomTime.Format("2006-01-02")
+}
+
+// 定义配置结构体
+type HTMLConfig struct {
+	ServerTag string
+	HostURL   string
+	Symbol    string
+	Sididx    string
+}
+
+// type Config struct {
+// 	Host      string `json:"host"`
+// 	Port      int    `json:"port"`
+// 	Debug     bool   `json:"debug"`
+// 	FldData   string `json:"fld_data"`
+// 	ServerTag string `json:"servertag"`
+// }
+// var cfg Config
+// var baseDir string
+
+// 生成HTML的构造函数
+func BuildHTML(cfg HTMLConfig) string {
+	url := cfg.HostURL
+	// 获取当前时间
+	now := time.Now()
+	// 格式化当前日期为 "YYYY-MM-DD" 格式
+	today := now.Format("2006-01-02")
+	// year := now.Year()
+	// month := int(now.Month())
+	// prday := now.AddDate(0, -1, 0).Format("2006-01-02")
+	// ydate := now.AddDate(-1, 0, 0).Format("2006-01-02")
+
+	// sym := cfg.Symbol
+	// idx := cfg.Sididx
+
+	fpathMonth1 := "ex1.csv.xz"
+	fpathMonth2 := "ex1.csv.xz"
+	fpathMonth3 := "ex1.csv.xz"
+	fpathMonth4 := "ex1.csv.xz"
+
+	fpathYear1 := "ex1.csv.xz"
+	fpathYear2 := "ex1.csv.xz"
+	fpathYear3 := "ex1.csv.xz"
+
+	// fmt.Println(fpathYear1, fpathYear2)
+	// fmt.Println(fpathMonth1, fpathMonth2)
+
+	return fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>GM-API [go] -> [ %s ] </title></head>
+<body>
+    <h1>GM-API (go语言版本)</h1>
+    <h2>服务器 : %s </h2>
+    <h3>当前日期 : %s </h3>
+    <ul>
+        <li>说明: <a href="http://%s/usage" target="_blank">http://%s/usage</a></li>
+        <li>测试1: <a href="http://%s/test" target="_blank">http://%s/test</a></li>
+        <li>测试2: <a href="http://%s/test2" target="_blank">http://%s/test2</a></li>
+        <li>测试3: <a href="http://%s/test3" target="_blank">http://%s/test3</a></li>
+    </ul>
+
+    <h3>行情数据</h3>
+    <ul>
+        <li>链接: <a href="http://%s/download" target="_blank">http://%s/download</a></li>
+        <li>测试: <a href="http://%s/download/test.txt" target="_blank">http://%s/download/test.txt</a></li>
+    </ul>
+
+    <h3>基本资料</h3>
+    <ul>
+	<li>个股: <a href="http://%s/download/%s" target="_blank">http://%s/download/%s</a></li>
+	<li>大盘: <a href="http://%s/download/%s" target="_blank">http://%s/download/%s</a></li>
+	<li>个股: <a href="http://%s/download/%s" target="_blank">http://%s/download/%s</a></li>
+	<li>大盘: <a href="http://%s/download/%s" target="_blank">http://%s/download/%s</a></li>
+    </ul>
+
+    <h3>财务数据</h3>
+    <ul>
+        <li>1m: <a href="http://%s/download/%s" target="_blank">http://%s/download/%s</a></li>
+        <li>pe: <a href="http://%s/download/%s" target="_blank">http://%s/download/%s</a></li>
+        <li>vv: <a href="http://%s/download/%s" target="_blank">http://%s/download/%s</a></li>
+    </ul>
+
+</body>
+</html>`,
+		cfg.ServerTag, cfg.ServerTag, today,
+
+		url, url,
+		url, url,
+		url, url,
+		url, url,
+
+		url, url,
+		url, url,
+
+		url, fpathMonth1, url, fpathMonth1,
+		url, fpathMonth2, url, fpathMonth2,
+		url, fpathMonth3, url, fpathMonth3,
+		url, fpathMonth4, url, fpathMonth4,
+
+		url, fpathYear1, url, fpathYear1,
+		url, fpathYear2, url, fpathYear2,
+		url, fpathYear3, url, fpathYear3,
+		// url, fpathMonth1, url, fpathMonth1,
+		// url, fpathYear2, url, fpathYear2,
+	)
+}
+
+func RouteUsage(c *gin.Context) {
+	hostURL := c.Request.Host
+
+	html := BuildHTML(HTMLConfig{
+		ServerTag: serverTag,
+		HostURL:   hostURL,
+		Symbol:    "SHSE.601088",
+		Sididx:    "SHSE.000001",
+	})
+
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 }
 
 func RouteTest(c *gin.Context) {
@@ -312,6 +438,306 @@ func RouteCurrent(c *gin.Context) {
 	// c.JSON(http.StatusOK, records)
 }
 
+func RouteHKInstHoldingInfo(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("types 参数为必须"))
+		return
+	}
+
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("trade_date", "")
+	// edate := c.DefaultQuery("edate", "")
+	// count := c.DefaultQuery("count", "")
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetHKInstHoldingInfo(gmapi, symbols, sdate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetHKInstHoldingDetailInfo)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteHKInstHoldingDetailInfo(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("types 参数为必须"))
+		return
+	}
+
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("trade_date", "")
+	// edate := c.DefaultQuery("edate", "")
+	// count := c.DefaultQuery("count", "")
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetHKInstHoldingDetailInfo(gmapi, symbols, sdate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetHKInstHoldingDetailInfo)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteSHZSZHKActiveStockTop10Info(c *gin.Context) {
+	symbols := c.DefaultQuery("types", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("types 参数为必须"))
+		return
+	}
+
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("trade_date", "")
+	// edate := c.DefaultQuery("edate", "")
+	// count := c.DefaultQuery("count", "")
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetSHSZHKActiveStockTop10Info(gmapi, symbols, sdate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetSHSZHKActiveStockTop10Info)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteSHZSZHKQuotaInfo(c *gin.Context) {
+	symbols := c.DefaultQuery("types", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("types 参数为必须"))
+		return
+	}
+
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+	count := c.DefaultQuery("count", "")
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetSHSZHKQuotaInfo(gmapi, symbols, sdate, edate, count, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetSHSZHKQuotaInfo)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteFndNetValue(c *gin.Context) {
+	symbols := c.DefaultQuery("fund", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("fund 参数为必须"))
+		return
+	}
+
+	today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", today)
+	edate := c.DefaultQuery("edate", today)
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetFndNetValue(gmapi, symbols, sdate, edate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFndNetValue)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+func RouteFndSplit(c *gin.Context) {
+	symbols := c.DefaultQuery("fund", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("fund 参数为必须"))
+		return
+	}
+
+	today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", today)
+	edate := c.DefaultQuery("edate", today)
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetFndSplit(gmapi, symbols, sdate, edate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFndSplit)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteFndPortfolio(c *gin.Context) {
+	symbols := c.DefaultQuery("fund", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("fund 参数为必须"))
+		return
+	}
+
+	today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", today)
+	edate := c.DefaultQuery("edate", today)
+	report_type := c.DefaultQuery("report_type", "")
+	portfolio_type := c.DefaultQuery("portfolio_type", "")
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetFndPortfolio(gmapi, symbols, report_type, portfolio_type, sdate, edate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFndPortfolio)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteFndConstituents(c *gin.Context) {
+	symbols := c.DefaultQuery("fund", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("fund 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	rawData, err := gm.GetFndConstituents(gmapi, symbols, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFndPortfolio)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteFndDividend(c *gin.Context) {
+	symbols := c.DefaultQuery("fund", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("fund 参数为必须"))
+		return
+	}
+
+	today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", today)
+	edate := c.DefaultQuery("edate", today)
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetFndDividend(gmapi, symbols, sdate, edate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFndDividend)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteFndAdjFactor(c *gin.Context) {
+	symbols := c.DefaultQuery("fund", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("fund 参数为必须"))
+		return
+	}
+
+	today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", today)
+	bdate := c.DefaultQuery("bdate", "")
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetFndAdjFactor(gmapi, symbols, sdate, edate, bdate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFndAdjFactor)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+func RouteIndustryCategory(c *gin.Context) {
+	symbols := c.DefaultQuery("source", "zjh2012")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("source 参数为必须"))
+		return
+	}
+
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("level", "1")
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetIndustryCategory(gmapi, symbols, sdate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetIndustryCategory)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+func RouteIndustryConstituents(c *gin.Context) {
+	symbols := c.DefaultQuery("industry_code", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("industry_code 参数为必须"))
+		return
+	}
+
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("date", "")
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetIndustryConstituents(gmapi, symbols, sdate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetIndustryConstituents)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteSymbolIndustry(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	// today := time.Now().Format("2006-01-02")
+	level := c.DefaultQuery("level", "")
+	source := c.DefaultQuery("source", "")
+	sdate := c.DefaultQuery("date", "")
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetSymbolIndustry(gmapi, symbols, source, level, sdate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetSymbolIndustry)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteIndexConstituents(c *gin.Context) {
+	symbols := c.DefaultQuery("index", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("index 参数为必须"))
+		return
+	}
+
+	today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("trade_date", today)
+	// edate := c.DefaultQuery("edate", today)
+	// sec := c.DefaultQuery("sec", "stock")
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetIndexConstituents(gmapi, symbols, sdate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetIndexConstituents)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteTradingSessions(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	// today := time.Now().Format("2006-01-02")
+	// sdate := c.DefaultQuery("sdate", today)
+	// edate := c.DefaultQuery("edate", today)
+	// sec := c.DefaultQuery("sec", "stock")
+	timeoutSeconds := 30
+
+	rawData, err := gm.GetTradingSessions(gmapi, symbols, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetTradingSessions)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
 func RouteMarketInfo(c *gin.Context) {
 	symbols := c.DefaultQuery("symbols", "")
 	// if symbols == "" {

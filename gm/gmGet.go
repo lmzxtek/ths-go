@@ -321,97 +321,6 @@ func GetCurrent(gmapi string, symbols string, timeoutSeconds int, split bool) ([
 	return data, nil
 }
 
-// 请求市场个股列表(gm-api)
-// 输入参数：
-//   - exchange: 交易所代码: SHSE,SZSE,CFFEX,DCE,CZCE,SHFE,INE
-//   - sec: 证券类型代码, 如 "stock"、"fund"、"index"
-//
-// 返回值：
-//   - 市场个股列表
-func GetMarketInfo(gmapi string,
-	symbols string, sec string, exchange string,
-	timeoutSeconds int) ([]map[string]any, error) {
-
-	url := fmt.Sprintf("%s/get_infos", gmapi)
-	params := map[string]string{
-		"split": "true",
-	}
-
-	if exchange != "" {
-		params["exchange"] = exchange
-	}
-	if symbols != "" {
-		params["symbols"] = symbols
-	}
-	if sec != "" {
-		params["sec"] = sec
-	}
-
-	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
-	if err != nil {
-		return nil, err
-	}
-
-	var rcd RawColData
-	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
-		return nil, fmt.Errorf("解析 JSON 数据失败(GetMarketInfo()): %v", unmarshalErr)
-	}
-
-	records, transformErr := rcd.ToRecords()
-	if transformErr != nil {
-		return nil, fmt.Errorf("转换数据失败(GetMarketInfo()): %v", transformErr)
-	}
-
-	return ConvertEob2Timestamp(records, false), nil
-}
-
-// 请求市场股票列表某交易日的交易数据(gm-api)
-// 输入参数：
-//   - exchange: 交易所代码: SHSE,SZSE,CFFEX,DCE,CZCE,SHFE,INE
-//   - sec: 证券类型代码, 如 "stock"、"fund"、"index"
-//
-// 返回值：
-//   - 市场个股列表
-func GetSymbolsInfo(gmapi string,
-	symbols string, sec string, exchange string, trade_date string,
-	timeoutSeconds int) ([]map[string]any, error) {
-
-	url := fmt.Sprintf("%s/get_symbols", gmapi)
-	params := map[string]string{
-		"split": "true",
-	}
-
-	if exchange != "" {
-		params["exchange"] = exchange
-	}
-	if symbols != "" {
-		params["symbols"] = symbols
-	}
-	if sec != "" {
-		params["sec"] = sec
-	}
-	if trade_date != "" {
-		params["trade_date"] = trade_date
-	}
-
-	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
-	if err != nil {
-		return nil, err
-	}
-
-	var rcd RawColData
-	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
-		return nil, fmt.Errorf("解析 JSON 数据失败(GetSymbolsInfo()): %v", unmarshalErr)
-	}
-
-	records, transformErr := rcd.ToRecords()
-	if transformErr != nil {
-		return nil, fmt.Errorf("转换数据失败(GetSymbolsInfo()): %v", transformErr)
-	}
-
-	return ConvertEob2Timestamp(records, false), nil
-}
-
 // 查询个股估值指标每日数据
 // 输入参数：
 //   - sdate: 开始日期, 格式: "2021-01-01"
@@ -1663,7 +1572,7 @@ func GetAbnorChangeDetail(gmapi string,
 // 输入参数：
 //   - symbols: 输入标的代码，可输入多个. 采用 str 格式时，多个标的代码必须用英文逗号分割，
 //   - trade_date: 交易日期，支持str格式（%Y-%m-%d 格式）和 datetime.date 格式，默认None表示最新交易日期。
-func GetHkInstHoldingInfo(gmapi string,
+func GetHKInstHoldingInfo(gmapi string,
 	symbols string, trade_date string,
 	timeoutSeconds int) ([]map[string]any, error) {
 	// if symbols == "" {
@@ -1704,7 +1613,7 @@ func GetHkInstHoldingInfo(gmapi string,
 // 输入参数：
 //   - symbols: 输入标的代码，可输入多个. 采用 str 格式时，多个标的代码必须用英文逗号分割，
 //   - trade_date: 交易日期，支持str格式（%Y-%m-%d 格式）和 datetime.date 格式，默认None表示最新交易日期。
-func GetHkInstHoldingDetailInfo(gmapi string,
+func GetHKInstHoldingDetailInfo(gmapi string,
 	symbols string, trade_date string,
 	timeoutSeconds int) ([]map[string]any, error) {
 	// if symbols == "" {
@@ -2287,6 +2196,97 @@ func GetTradingSessions(gmapi string,
 	records, transformErr := rcd.ToRecords()
 	if transformErr != nil {
 		return nil, fmt.Errorf("转换数据失败(get_trading_sessions()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, false), nil
+}
+
+// 请求市场个股列表(gm-api)
+// 输入参数：
+//   - exchange: 交易所代码: SHSE,SZSE,CFFEX,DCE,CZCE,SHFE,INE
+//   - sec: 证券类型代码, 如 "stock"、"fund"、"index"
+//
+// 返回值：
+//   - 市场个股列表
+func GetMarketInfo(gmapi string,
+	symbols string, sec string, exchange string,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	url := fmt.Sprintf("%s/get_infos", gmapi)
+	params := map[string]string{
+		"split": "true",
+	}
+
+	if exchange != "" {
+		params["exchange"] = exchange
+	}
+	if symbols != "" {
+		params["symbols"] = symbols
+	}
+	if sec != "" {
+		params["sec"] = sec
+	}
+
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(GetMarketInfo()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(GetMarketInfo()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, false), nil
+}
+
+// 请求市场股票列表某交易日的交易数据(gm-api)
+// 输入参数：
+//   - exchange: 交易所代码: SHSE,SZSE,CFFEX,DCE,CZCE,SHFE,INE
+//   - sec: 证券类型代码, 如 "stock"、"fund"、"index"
+//
+// 返回值：
+//   - 市场个股列表
+func GetSymbolsInfo(gmapi string,
+	symbols string, sec string, exchange string, trade_date string,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	url := fmt.Sprintf("%s/get_symbols", gmapi)
+	params := map[string]string{
+		"split": "true",
+	}
+
+	if exchange != "" {
+		params["exchange"] = exchange
+	}
+	if symbols != "" {
+		params["symbols"] = symbols
+	}
+	if sec != "" {
+		params["sec"] = sec
+	}
+	if trade_date != "" {
+		params["trade_date"] = trade_date
+	}
+
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(resp, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(GetSymbolsInfo()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(GetSymbolsInfo()): %v", transformErr)
 	}
 
 	return ConvertEob2Timestamp(records, false), nil

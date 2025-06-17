@@ -1174,7 +1174,7 @@ func TestGetHkInst(t *testing.T) {
 	trade_date := "2025-05-29"
 	trade_date = ""
 
-	resp, err := GetHkInstHoldingInfo(url, symbols, trade_date, timeoutSeconds)
+	resp, err := GetHKInstHoldingInfo(url, symbols, trade_date, timeoutSeconds)
 	// resp, err := GetHkInstHoldingDetailInfo(url, symbols, trade_date, timeoutSeconds)
 	if err != nil {
 		fmt.Printf("获取数据失败: %s\n", err)

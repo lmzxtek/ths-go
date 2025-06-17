@@ -14,7 +14,8 @@ func ConvertEob2Timestamp(records []map[string]any, istimestamp bool) []map[stri
 	for i := range records {
 		dd1 := make(map[string]any, len(records[i]))
 		for k, v := range records[i] {
-			if k == "timestamp" || k == "eob" || k == "trade_date" {
+			// if k == "timestamp" || k == "eob" || k == "trade_date" {
+			if k == "timestamp" || k == "eob" {
 				key := "timestamp"
 				tstr := v.(string)
 				// tstr = strings.TrimSpace(tstr)

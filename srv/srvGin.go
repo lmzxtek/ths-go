@@ -383,7 +383,7 @@ func BuildHTML2(cfg HTMLConfig) string {
 	strKBars := fmt.Sprintf(`
     <h3>历史行情</h3>
     <ul>
-		<li>综合接口(1m) : <br>
+		<li>综合接口(1m)  <br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
@@ -395,7 +395,7 @@ func BuildHTML2(cfg HTMLConfig) string {
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 		</li>
 		<br>
-		<li>CSV接口 : <br>
+		<li>CSV接口  <br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
@@ -405,7 +405,7 @@ func BuildHTML2(cfg HTMLConfig) string {
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 		</li>
 		<br>
-		<li>API接口 : <br>
+		<li>API接口  <br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
@@ -463,25 +463,67 @@ func BuildHTML2(cfg HTMLConfig) string {
 	strHistoryInfo2 := "history_info?symbol=" + sym + "&sdate=" + strPreYear
 	strHistoryInfo3 := "history_info?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
 
+	strDaily1 := "daily_valuation?symbol=" + sym + "&sdate=" + strPreMonth
+	strDaily2 := "daily_mktvalue?symbol=" + sym + "&sdate=" + strPreMonth
+	strDaily3 := "daily_basic?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + strPreDay
+	strDaily4 := "daily_valuation_pt?symbols=" + syms + "&date=" + today
+	strDaily5 := "daily_mktvalue_pt?symbols=" + syms + "&date=" + today
+	strDaily6 := "daily_basic_pt?symbols=" + syms + "&date=" + today
+
+	strShareHolder1 := "share_change?symbol=" + sym + "&sdate=" + "2020-01-01"
+	strShareHolder2 := "shareholder_num?symbol=" + sym + "&sdate=" + strPreYear + "&tradable_holder=1"
+	strShareHolder3 := "top_shareholder?symbol=" + sym + "&sdate=" + strPreYear
+	strShareHolder4 := "ration?symbol=" + "SZSE.000728" + "&sdate=" + "2005-07-01"
+	strShareHolder5 := "dvidend?symbol=" + sym + "&sdate=" + strPreYear
+	strShareHolder6 := "adj_factor?symbol=" + sym + "&sdate=" + strPreYear
+	strShareHolder7 := "trading_sessions?symbols=" + syms
+
 	strInfo := fmt.Sprintf(`
     <h3>基本资料</h3>
     <ul>
-		<li>市场信息 : <br>
+		<li>市场信息  <br>
+			股票：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			指数：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			基金：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<br>
+		<li>个股信息  <br>
+			股票：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			单股：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			多股：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			指数：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			沪指：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<br>
+		<li>个股历史信息  <br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 		</li>
-		<li>个股信息 : <br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		<br>
+		<li>个股历史数据  <br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 		</li>
-		<li>个股历史信息 : <br>
+		<br>
+		<li>多股截面数据  <br>			
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<br>
+		<li>股东数据  <br>			
+			股东变动：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			股东户数：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			十大股东：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			配股信息：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			分红送股：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<br>
+		<li>其他  <br>			
+			复权因子：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			交易时间段：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 		</li>
     </ul>
 `,
@@ -498,8 +540,154 @@ func BuildHTML2(cfg HTMLConfig) string {
 		url, strHistoryInfo1, url, strHistoryInfo1,
 		url, strHistoryInfo2, url, strHistoryInfo2,
 		url, strHistoryInfo3, url, strHistoryInfo3,
+
+		url, strDaily1, url, strDaily1,
+		url, strDaily2, url, strDaily2,
+		url, strDaily3, url, strDaily3,
+		url, strDaily4, url, strDaily4,
+		url, strDaily5, url, strDaily5,
+		url, strDaily6, url, strDaily6,
+
+		url, strShareHolder1, url, strShareHolder1,
+		url, strShareHolder2, url, strShareHolder2,
+		url, strShareHolder3, url, strShareHolder3,
+		url, strShareHolder4, url, strShareHolder4,
+		url, strShareHolder5, url, strShareHolder5,
+		url, strShareHolder6, url, strShareHolder6,
+		url, strShareHolder7, url, strShareHolder7,
 	)
 	builder.WriteString(strInfo)
+
+	//=============================================================
+	strFinance1 := "finance_prime?symbol=" + sym + "&sdate=" + strPreYear
+	strFinance2 := "finance_deriv?symbol=" + sym + "&sdate=" + strPreYear
+	strFinance3 := "finance_prime_pt?symbols=" + syms + "&date=" + today
+	strFinance4 := "finance_deriv_pt?symbols=" + syms + "&date=" + today
+
+	strFundamental1 := "fundamentals_cashflow?symbol=" + sym + "&sdate=" + strPreYear
+	strFundamental2 := "fundamentals_balance?symbol=" + sym + "&sdate=" + strPreYear
+	strFundamental3 := "fundamentals_income?symbol=" + sym + "&sdate=" + strPreYear + "&edate=" + strPreDay
+	strFundamental4 := "fundamentals_cashflow_pt?symbols=" + syms + "&date=" + today
+	strFundamental5 := "fundamentals_balance_pt?symbols=" + syms + "&date=" + today
+	strFundamental6 := "fundamentals_income_pt?symbols=" + syms + "&date=" + today
+
+	strFF := fmt.Sprintf(`
+    <h3>财务数据</h3>
+    <ul>
+		<li>财务数据  <br>
+			主要指标：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			衍生指标：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
+			主要指标(pt)：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			衍生指标(pt)：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<br>
+		<li>财务报表  <br>
+			现金流量表：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			资产负债表：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			利润表：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
+			现金流量表(pt)：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			资产负债表(pt)：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			利润表(pt)：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+    </ul>
+`,
+		url, strFinance1, url, strFinance1,
+		url, strFinance2, url, strFinance2,
+		url, strFinance3, url, strFinance3,
+		url, strFinance4, url, strFinance4,
+
+		url, strFundamental1, url, strFundamental1,
+		url, strFundamental2, url, strFundamental2,
+		url, strFundamental3, url, strFundamental3,
+		url, strFundamental4, url, strFundamental4,
+		url, strFundamental5, url, strFundamental5,
+		url, strFundamental6, url, strFundamental6,
+	)
+	builder.WriteString(strFF)
+
+	//=============================================================
+	strSecBk1 := "industry_category"
+	strSecBk2 := "secotr_category" + "?sector_type=" + "1003"
+	strSecBk3 := "industry_constituents" + "?industry_code=A" + "&date=" + today
+	strSecBk4 := "sector_constituents" + "?sector_code=" + "007089"
+	strSecBk5 := "index_constituents" + "?index=" + "SHSE.000300"
+	strSecBk6 := "symbols_industry" + "?symbols=" + syms + "&date=" + today
+	strSecBk7 := "symbols_sector" + "?symbols=" + syms + "&sector_type=1002"
+
+	strAbnor1 := "abnor_change_stocks"
+	strAbnor2 := "abnor_change_detail?" + "&trade_date=" + today
+
+	strFund1 := "fnd_constituents?fund=SHSE.510880"
+	strFund2 := "fnd_portfolio?fund=SHSE.510880" + "&sdate=" + strPreYear + "&report_type=1&portfolio_tpe=stk"
+	strFund3 := "fnd_split?fund=SZSE.161725" + "&sdate=" + "2022-01-01" + "&edate=" + "2022-10-01"
+	strFund4 := "fnd_dividend?fund=SHSE.510880" + "&sdate=" + strPreYear
+	strFund5 := "fnd_netvalue?fund=SHSE.510880" + "&sdate=" + strPreYear
+	strFund6 := "fnd_adj_factor?fund=SHSE.510880" + "&sdate=" + strPreYear
+
+	strHK1 := "shszhk_quota_info?" + "&sdate=" + strPreYear
+	strHK2 := "shszhk_active_stock_top10_info"
+	strHK3 := "hk_inst_holding_info?symbols=" + sym + ",SZSE.001696"
+	strHK4 := "hk_inst_holding_detail_info?symbols=" + sym + ",SZSE.001696"
+
+	strOthers := fmt.Sprintf(`
+    <h3>其他数据</h3>
+    <ul>
+		<li>行业与板块  <br>
+			行业分类：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			板块分类：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			行业成分股：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			板块成分股：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			指数成分股：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			股票所属行业：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			股票所属板块：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<br>
+		<li>龙虎榜  <br>
+			股票：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			营业部：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<br>
+		<li>基金数据  <br>
+			成分股：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			资产组合：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			拆分折算：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
+			基金分红：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			净值数据：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			复权因子：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<br>
+		<li>港市数据  <br>
+			沪深港通额度数据：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			沪深港通十大活跃：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
+			港股机构持股数据：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			港股机构持股明细：<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+    </ul>
+`,
+		url, strSecBk1, url, strSecBk1,
+		url, strSecBk2, url, strSecBk2,
+		url, strSecBk3, url, strSecBk3,
+		url, strSecBk4, url, strSecBk4,
+		url, strSecBk5, url, strSecBk5,
+		url, strSecBk6, url, strSecBk6,
+		url, strSecBk7, url, strSecBk7,
+
+		url, strAbnor1, url, strAbnor1,
+		url, strAbnor2, url, strAbnor2,
+
+		url, strFund1, url, strFund1,
+		url, strFund2, url, strFund2,
+		url, strFund3, url, strFund3,
+		url, strFund4, url, strFund4,
+		url, strFund5, url, strFund5,
+		url, strFund6, url, strFund6,
+
+		url, strHK1, url, strHK1,
+		url, strHK2, url, strHK2,
+		url, strHK3, url, strHK3,
+		url, strHK4, url, strHK4,
+	)
+	builder.WriteString(strOthers)
 
 	//=============================================================
 	strTail := `
@@ -802,7 +990,6 @@ func RouteDailyValuation(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
 	sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("edate", "")
 	fields := c.DefaultQuery("fields", "")
@@ -823,7 +1010,6 @@ func RouteDailyBasic(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
 	sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("edate", "")
 	fields := c.DefaultQuery("fields", "")
@@ -844,7 +1030,6 @@ func RouteDailyMktvalue(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
 	sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("edate", "")
 	fields := c.DefaultQuery("fields", "")
@@ -865,7 +1050,6 @@ func RouteFinancePrime(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
 	sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("edate", "")
 	fields := c.DefaultQuery("fields", "")
@@ -888,7 +1072,6 @@ func RouteFinanceDeriv(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
 	sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("edate", "")
 	fields := c.DefaultQuery("fields", "")
@@ -910,7 +1093,6 @@ func RouteFundamentalsCashflow(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
 	sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("edate", "")
 	fields := c.DefaultQuery("fields", "")
@@ -933,7 +1115,6 @@ func RouteFundamentalsIncome(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
 	sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("edate", "")
 	fields := c.DefaultQuery("fields", "")
@@ -956,7 +1137,6 @@ func RouteFundamentalsBalance(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
 	sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("edate", "")
 	fields := c.DefaultQuery("fields", "")
@@ -979,8 +1159,6 @@ func RouteFundamentalsBalancePt(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
-	// sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("date", "")
 	fields := c.DefaultQuery("fields", "")
 	rpt_type := c.DefaultQuery("rpt_type", "")
@@ -1002,8 +1180,6 @@ func RouteFundamentalsCashflowPt(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
-	// sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("date", "")
 	fields := c.DefaultQuery("fields", "")
 	rpt_type := c.DefaultQuery("rpt_type", "")
@@ -1025,8 +1201,6 @@ func RouteFundamentalsIncomePt(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
-	// sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("date", "")
 	fields := c.DefaultQuery("fields", "")
 	rpt_type := c.DefaultQuery("rpt_type", "")
@@ -1048,8 +1222,6 @@ func RouteFinancePrimePt(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
-	// sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("date", "")
 	fields := c.DefaultQuery("fields", "")
 	rpt_type := c.DefaultQuery("rpt_type", "")
@@ -1071,8 +1243,6 @@ func RouteFinanceDerivPt(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
-	// sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("date", "")
 	fields := c.DefaultQuery("fields", "")
 	rpt_type := c.DefaultQuery("rpt_type", "")
@@ -1094,8 +1264,6 @@ func RouteDailyValuationPt(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
-	// sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("date", "")
 	fields := c.DefaultQuery("fields", "")
 
@@ -1115,8 +1283,6 @@ func RouteDailyBasicPt(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
-	// sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("date", "")
 	fields := c.DefaultQuery("fields", "")
 
@@ -1136,8 +1302,6 @@ func RouteDailyMktvaluePt(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
-	// sdate := c.DefaultQuery("sdate", "")
 	edate := c.DefaultQuery("date", "")
 	fields := c.DefaultQuery("fields", "")
 
@@ -1157,11 +1321,6 @@ func RouteSectorCategory(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
-	// sdate := c.DefaultQuery("sdate", "")
-	// edate := c.DefaultQuery("edate", "")
-	// bdate := c.DefaultQuery("bdate", "")
-
 	rawData, err := gm.GetSectorCategory(gmapi, symbols, timeoutSeconds)
 	if err != nil {
 		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetSectorCategory)": err.Error()})
@@ -1178,11 +1337,6 @@ func RouteSectorConstituents(c *gin.Context) {
 	}
 
 	timeoutSeconds := 30
-	// today := time.Now().Format("2006-01-02")
-	// sdate := c.DefaultQuery("sdate", "")
-	// edate := c.DefaultQuery("edate", "")
-	// bdate := c.DefaultQuery("bdate", "")
-
 	rawData, err := gm.GetSectorConstituents(gmapi, symbols, timeoutSeconds)
 	if err != nil {
 		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetSectorConstituents)": err.Error()})
@@ -1327,8 +1481,8 @@ func RouteTopShareholder(c *gin.Context) {
 	timeoutSeconds := 30
 	// today := time.Now().Format("2006-01-02")
 	sdate := c.DefaultQuery("sdate", "")
-	edate := c.DefaultQuery("edate", "")
 	tradable_holder := c.DefaultQuery("tradable_holder", "")
+	edate := c.DefaultQuery("edate", "")
 
 	rawData, err := gm.GetTopShareholder(gmapi, symbols, sdate, edate, tradable_holder, timeoutSeconds)
 	if err != nil {
@@ -1338,12 +1492,12 @@ func RouteTopShareholder(c *gin.Context) {
 	c.JSON(http.StatusOK, rawData)
 }
 
-func RouteAbnorChangeStock(c *gin.Context) {
+func RouteAbnorChangeStocks(c *gin.Context) {
 	symbols := c.DefaultQuery("symbols", "")
-	if symbols == "" {
-		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
-		return
-	}
+	// if symbols == "" {
+	// 	c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+	// 	return
+	// }
 
 	timeoutSeconds := 30
 	// today := time.Now().Format("2006-01-02")
@@ -1362,10 +1516,10 @@ func RouteAbnorChangeStock(c *gin.Context) {
 
 func RouteAbnorChangeDetail(c *gin.Context) {
 	symbols := c.DefaultQuery("symbols", "")
-	if symbols == "" {
-		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
-		return
-	}
+	// if symbols == "" {
+	// 	c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+	// 	return
+	// }
 
 	timeoutSeconds := 30
 	// today := time.Now().Format("2006-01-02")
@@ -1384,10 +1538,10 @@ func RouteAbnorChangeDetail(c *gin.Context) {
 
 func RouteHKInstHoldingInfo(c *gin.Context) {
 	symbols := c.DefaultQuery("symbols", "")
-	if symbols == "" {
-		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
-		return
-	}
+	// if symbols == "" {
+	// 	c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+	// 	return
+	// }
 
 	// today := time.Now().Format("2006-01-02")
 	sdate := c.DefaultQuery("trade_date", "")
@@ -1405,10 +1559,10 @@ func RouteHKInstHoldingInfo(c *gin.Context) {
 
 func RouteHKInstHoldingDetailInfo(c *gin.Context) {
 	symbols := c.DefaultQuery("symbols", "")
-	if symbols == "" {
-		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
-		return
-	}
+	// if symbols == "" {
+	// 	c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+	// 	return
+	// }
 
 	// today := time.Now().Format("2006-01-02")
 	sdate := c.DefaultQuery("trade_date", "")
@@ -1426,10 +1580,10 @@ func RouteHKInstHoldingDetailInfo(c *gin.Context) {
 
 func RouteSHZSZHKActiveStockTop10Info(c *gin.Context) {
 	symbols := c.DefaultQuery("types", "")
-	if symbols == "" {
-		c.JSON(http.StatusBadRequest, fmt.Errorf("types 参数为必须"))
-		return
-	}
+	// if symbols == "" {
+	// 	c.JSON(http.StatusBadRequest, fmt.Errorf("types 参数为必须"))
+	// 	return
+	// }
 
 	// today := time.Now().Format("2006-01-02")
 	sdate := c.DefaultQuery("trade_date", "")
@@ -1447,10 +1601,10 @@ func RouteSHZSZHKActiveStockTop10Info(c *gin.Context) {
 
 func RouteSHZSZHKQuotaInfo(c *gin.Context) {
 	symbols := c.DefaultQuery("types", "")
-	if symbols == "" {
-		c.JSON(http.StatusBadRequest, fmt.Errorf("types 参数为必须"))
-		return
-	}
+	// if symbols == "" {
+	// 	c.JSON(http.StatusBadRequest, fmt.Errorf("types 参数为必须"))
+	// 	return
+	// }
 
 	// today := time.Now().Format("2006-01-02")
 	sdate := c.DefaultQuery("sdate", "")
@@ -1620,7 +1774,7 @@ func RouteIndustryConstituents(c *gin.Context) {
 	c.JSON(http.StatusOK, rawData)
 }
 
-func RouteSymbolIndustry(c *gin.Context) {
+func RouteSymbolsIndustry(c *gin.Context) {
 	symbols := c.DefaultQuery("symbols", "")
 	if symbols == "" {
 		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))

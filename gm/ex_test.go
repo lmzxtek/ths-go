@@ -695,7 +695,7 @@ func TestGetPrevN(t *testing.T) {
 	count := 5
 	include := true
 
-	resp, err := GetPrevNByte(url, date, count, timeoutSeconds, include)
+	resp, err := GetPrevNByte(url, date, count, include, timeoutSeconds)
 	if err != nil {
 		fmt.Printf(" 获取数据失败(gm.GetPrevN): %v\n", err)
 	}
@@ -711,7 +711,7 @@ func TestGetNextN(t *testing.T) {
 	count := 5
 	include := true
 
-	resp, err := GetNextNByte(url, date, count, timeoutSeconds, include)
+	resp, err := GetNextNByte(url, date, count, include, timeoutSeconds)
 	if err != nil {
 		fmt.Printf(" 获取数据失败(gm.GetNextN): %v\n", err)
 	}
@@ -1004,7 +1004,7 @@ func TestGetSymbolSector(t *testing.T) {
 	sector_type := "1001"
 	sector_type = "1003"
 
-	resp, err := GetSymbolSector(url, symbols, sector_type, timeoutSeconds)
+	resp, err := GetSymbolsSector(url, symbols, sector_type, timeoutSeconds)
 	if err != nil {
 		fmt.Printf("获取数据失败: %s\n", err)
 	}

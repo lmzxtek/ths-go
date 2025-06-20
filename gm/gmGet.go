@@ -204,7 +204,7 @@ func GetCalendar(gmapi string, syear string, eyear string, exchange string, time
 }
 
 // 查询指定日期的前n个交易日
-func GetPrevNByte(gmapi string, date string, count int, timeoutSeconds int, include bool) ([]byte, error) {
+func GetPrevNByte(gmapi string, date string, count int, include bool, timeoutSeconds int) ([]byte, error) {
 	url := fmt.Sprintf("%s/get_dates_prev_n", gmapi)
 
 	cdate := date
@@ -228,9 +228,9 @@ func GetPrevNByte(gmapi string, date string, count int, timeoutSeconds int, incl
 }
 
 // 查询指定日期的前n个交易日
-func GetPrevN(gmapi string, date string, count int, timeoutSeconds int, include bool) ([]any, error) {
+func GetPrevN(gmapi string, date string, count int, include bool, timeoutSeconds int) ([]any, error) {
 
-	rawData, err := GetPrevNByte(gmapi, date, count, timeoutSeconds, include)
+	rawData, err := GetPrevNByte(gmapi, date, count, include, timeoutSeconds)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +245,7 @@ func GetPrevN(gmapi string, date string, count int, timeoutSeconds int, include 
 }
 
 // 查询指定日期的后n个交易日
-func GetNextNByte(gmapi string, date string, count int, timeoutSeconds int, include bool) ([]byte, error) {
+func GetNextNByte(gmapi string, date string, count int, include bool, timeoutSeconds int) ([]byte, error) {
 	url := fmt.Sprintf("%s/get_dates_next_n", gmapi)
 
 	cdate := date
@@ -269,9 +269,9 @@ func GetNextNByte(gmapi string, date string, count int, timeoutSeconds int, incl
 }
 
 // 查询指定日期的前n个交易日
-func GetNextN(gmapi string, date string, count int, timeoutSeconds int, include bool) ([]any, error) {
+func GetNextN(gmapi string, date string, count int, include bool, timeoutSeconds int) ([]any, error) {
 
-	rawData, err := GetNextNByte(gmapi, date, count, timeoutSeconds, include)
+	rawData, err := GetNextNByte(gmapi, date, count, include, timeoutSeconds)
 	if err != nil {
 		return nil, err
 	}
@@ -283,6 +283,32 @@ func GetNextN(gmapi string, date string, count int, timeoutSeconds int, include 
 	}
 
 	return data, nil
+}
+
+// 获取给定日期区间的交易日列表
+func GetDatesList(gmapi string, sdate string, edate string, timeoutSeconds int) ([]string, error) {
+	if sdate == "" {
+		sdate = "2005-01-01"
+	}
+	if edate == "" {
+		edate = time.Now().Format("2006-01-02")
+	}
+	stime, _ := time.Parse("2006-01-02", sdate)
+	etime, _ := time.Parse("2006-01-02", edate)
+	count := int(etime.Sub(stime).Hours() / 24)
+
+	var dates []string
+
+	datesRsp, _ := GetPrevN(gmapi, edate, count+1, true, timeoutSeconds)
+	for _, date := range datesRsp {
+		strDate := date.(string)
+		if strDate < sdate {
+			continue
+		}
+		dates = append(dates, strDate)
+	}
+
+	return dates, nil
 }
 
 // 获取行情快照数据
@@ -1180,7 +1206,7 @@ func GetSectorConstituents(gmapi string,
 // 查询个股所属板块
 // 输入参数：
 //   - sector_type: 只能选择一种类型，可选择 1001:市场类 1002:地域类 1003:概念类
-func GetSymbolSector(gmapi string,
+func GetSymbolsSector(gmapi string,
 	symbols string, sector_type string,
 	timeoutSeconds int) ([]map[string]any, error) {
 	if sector_type == "" {
@@ -2995,6 +3021,8 @@ func GetGM1m(gmcsv string, gmapi string,
 
 	isclip := true
 
+	// 应该先判断一下开始日期是否是超过当月月初，如果超过则不获取CSV数据：
+	// 只有开始日期小于当月月初时才获取CSV数据，以提高接口数据获取速度
 	dcsv, _ := GetCSV1m(gmcsv, symbol, sday, eday, istimestamp, isclip, timeoutSeconds)
 	if len(dcsv) > 0 {
 		ddd = append(ddd, dcsv...)
@@ -3040,5 +3068,35 @@ func GetGM1m(gmcsv string, gmapi string,
 	// 	// 处理一下数据结构，使得CSV数据和API数据合并
 	// }
 
+	return ddd, nil
+}
+
+// 按日期列表从gm-api获取单支股票分时行情数据
+func Get1mByDatelist(gmapi string,
+	symbol string, datelist []string, istimestamp bool,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	var ddd []map[string]any
+	for _, date := range datelist {
+		dapi, _ := GetKbarsHis(gmapi, symbol, "1m", date, date, istimestamp, timeoutSeconds)
+		// jsonData, _ := json.Marshal(dapi[:5])
+		// fmt.Println(string(jsonData))
+
+		// fmt.Printf("获取API数据成功: %d条: %s - %s\n", len(dapi), date, date)
+		// 处理一下数据结构，使得CSV数据和API数据合并
+		for i := range dapi {
+			// 去掉API数据中的symbol字段
+			dd1 := make(map[string]any, 6)
+
+			dd1["timestamp"] = dapi[i]["timestamp"]
+			dd1["open"] = dapi[i]["open"]
+			dd1["high"] = dapi[i]["high"]
+			dd1["low"] = dapi[i]["low"]
+			dd1["close"] = dapi[i]["close"]
+			dd1["volume"] = dapi[i]["volume"]
+
+			ddd = append(ddd, dd1)
+		}
+	}
 	return ddd, nil
 }

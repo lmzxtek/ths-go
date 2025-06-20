@@ -67,6 +67,7 @@ func main() {
 	r.GET("/test3", srv.RouteTest3)
 
 	r.GET("/gm1m", srv.RouteGM1m)
+	r.GET("/api1m", srv.RouteGMApi1m)
 
 	r.GET("/csv1m", srv.RouteCSVxz1m)
 	r.GET("/csvtag", srv.RouteCSVxzTag)
@@ -82,12 +83,13 @@ func main() {
 
 	r.GET("/prevn", srv.RouteDatesPrevN)
 	r.GET("/nextn", srv.RouteDatesNextN)
+	r.GET("/dateslist", srv.RouteDatesList)
 	r.GET("/calendar", srv.RouteCalendar)
 	r.GET("/calendar2", srv.RouteCalendar2)
 
-	r.GET("/marketinfo", srv.RouteMarketInfo)
-	r.GET("/symbolsinfo", srv.RouteSymbolsInfo)
-	r.GET("/historyinfo", srv.RouteHistoryInfo)
+	r.GET("/market_info", srv.RouteMarketInfo)
+	r.GET("/symbols_info", srv.RouteSymbolsInfo)
+	r.GET("/history_info", srv.RouteHistoryInfo)
 
 	r.GET("/trading_sessions", srv.RouteTradingSessions)
 	r.GET("/index_constituents", srv.RouteIndexConstituents)

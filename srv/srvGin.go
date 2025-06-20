@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -95,26 +96,52 @@ func BuildHTML(cfg HTMLConfig) string {
 	now := time.Now()
 	// 格式化当前日期为 "YYYY-MM-DD" 格式
 	today := now.Format("2006-01-02")
-	// year := now.Year()
-	// month := int(now.Month())
-	// prday := now.AddDate(0, -1, 0).Format("2006-01-02")
-	// ydate := now.AddDate(-1, 0, 0).Format("2006-01-02")
+	strCurYear := now.Format("2006")
+	// strMonth := now.Format("01")
+	// strDay := now.Format("02")
+	// strDate := strYear + "-" + strMonth + "-" + strDay
 
-	// sym := cfg.Symbol
-	// idx := cfg.Sididx
+	strPreMonth := now.AddDate(0, -1, 0).Format("2006-01-02")
+	preYear := now.AddDate(-1, 0, 0)
+	strYear1 := preYear.Format("2006")
+	strPreYear := preYear.Format("2006-01-02")
 
-	fpathMonth1 := "ex1.csv.xz"
-	fpathMonth2 := "ex1.csv.xz"
-	fpathMonth3 := "ex1.csv.xz"
-	fpathMonth4 := "ex1.csv.xz"
+	syms := "SHSE.601088,SZSE.300917"
+	sym := cfg.Symbol
+	idx := cfg.Sididx
 
-	fpathYear1 := "ex1.csv.xz"
-	fpathYear2 := "ex1.csv.xz"
-	fpathYear3 := "ex1.csv.xz"
+	//===================================================================
+	strDatePrevN1 := "prevn?date=" + today + "&count=10"
+	strDatePrevN2 := "prevn?date=" + today + "&count=10&include=false"
+	strDatePrevN3 := "prevn?date=" + today + "&count=365"
+	strDateNextN1 := "nextn?date=" + today + "&count=10"
+	strDateNextN2 := "nextn?date=" + today + "&count=10&include=false"
 
-	// fmt.Println(fpathYear1, fpathYear2)
-	// fmt.Println(fpathMonth1, fpathMonth2)
+	// strTradeCalendar1 := "calendar"
+	strTradeCalendar1 := "calendar"
+	strTradeCalendar2 := "calendar?eyear=" + strYear1
+	strTradeCalendar3 := "calendar?syear=" + strYear1 + "&eyear=" + strCurYear
+	strTradeCalendar4 := "calendar?syear=" + "2005"
 
+	kbGM1 := "gm1m?symbol=" + sym
+	kbGM2 := "gm1m?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
+	kbGM3 := "gm1m?symbol=" + sym + "&sdate=" + strPreYear + "&edate=" + today
+
+	strMarketInfo1 := "market_info?sec=stock"
+	strMarketInfo2 := "market_info?sec=index"
+	strMarketInfo3 := "market_info?sec=fund"
+
+	strSymbolInfo1 := "symbols_info?sec=stock"
+	strSymbolInfo2 := "symbols_info?sec=stock&symbols=" + sym
+	strSymbolInfo3 := "symbols_info?sec=stock&symbols=" + syms
+	strSymbolInfo4 := "symbols_info?sec=index"
+	strSymbolInfo5 := "symbols_info?sec=index&symbols=" + idx
+
+	strHistoryInfo1 := "history_info?symbol=" + sym
+	strHistoryInfo2 := "history_info?symbol=" + sym + "&sdate=" + strPreYear
+	strHistoryInfo3 := "history_info?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
+
+	//===================================================================
 	return fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><title>GM-API [go] -> [ %s ] </title></head>
@@ -129,25 +156,56 @@ func BuildHTML(cfg HTMLConfig) string {
         <li>测试3: <a href="http://%s/test3" target="_blank">http://%s/test3</a></li>
     </ul>
 
-    <h3>行情数据</h3>
+    <h3>交易日历</h3>
     <ul>
-        <li>链接: <a href="http://%s/download" target="_blank">http://%s/download</a></li>
-        <li>测试: <a href="http://%s/download/test.txt" target="_blank">http://%s/download/test.txt</a></li>
+        <li>前N: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+        <li>前N: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+        <li>前N: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+        <li>后N: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+        <li>后N: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+        <li>日历(当年): <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+        <li>日历(去年): <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+        <li>日历(两年): <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+        <li>日历(2005~): <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+    </ul>
+
+    <h3>历史行情</h3>
+    <ul>
+		<li>综合接口 : <br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<li>API接口 : <br>
+		</li>
+		<li>CSV接口 : <br>
+		</li>
     </ul>
 
     <h3>基本资料</h3>
     <ul>
-	<li>个股: <a href="http://%s/download/%s" target="_blank">http://%s/download/%s</a></li>
-	<li>大盘: <a href="http://%s/download/%s" target="_blank">http://%s/download/%s</a></li>
-	<li>个股: <a href="http://%s/download/%s" target="_blank">http://%s/download/%s</a></li>
-	<li>大盘: <a href="http://%s/download/%s" target="_blank">http://%s/download/%s</a></li>
+		<li>市场信息 : <br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<li>个股信息 : <br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<li>个股历史信息 : <br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
     </ul>
 
     <h3>财务数据</h3>
     <ul>
-        <li>1m: <a href="http://%s/download/%s" target="_blank">http://%s/download/%s</a></li>
-        <li>pe: <a href="http://%s/download/%s" target="_blank">http://%s/download/%s</a></li>
-        <li>vv: <a href="http://%s/download/%s" target="_blank">http://%s/download/%s</a></li>
+        <li>vv: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
     </ul>
 
 </body>
@@ -159,26 +217,305 @@ func BuildHTML(cfg HTMLConfig) string {
 		url, url,
 		url, url,
 
-		url, url,
-		url, url,
+		url, strDatePrevN1, url, strDatePrevN1,
+		url, strDatePrevN2, url, strDatePrevN2,
+		url, strDatePrevN3, url, strDatePrevN3,
+		url, strDateNextN1, url, strDateNextN1,
+		url, strDateNextN2, url, strDateNextN2,
 
-		url, fpathMonth1, url, fpathMonth1,
-		url, fpathMonth2, url, fpathMonth2,
-		url, fpathMonth3, url, fpathMonth3,
-		url, fpathMonth4, url, fpathMonth4,
+		url, strTradeCalendar1, url, strTradeCalendar1,
+		url, strTradeCalendar2, url, strTradeCalendar2,
+		url, strTradeCalendar3, url, strTradeCalendar3,
+		url, strTradeCalendar4, url, strTradeCalendar4,
 
-		url, fpathYear1, url, fpathYear1,
-		url, fpathYear2, url, fpathYear2,
-		url, fpathYear3, url, fpathYear3,
+		url, kbGM1, url, kbGM1,
+		url, kbGM2, url, kbGM2,
+		url, kbGM3, url, kbGM3,
+
+		url, strMarketInfo1, url, strMarketInfo1,
+		url, strMarketInfo2, url, strMarketInfo2,
+		url, strMarketInfo3, url, strMarketInfo3,
+
+		url, strSymbolInfo1, url, strSymbolInfo1,
+		url, strSymbolInfo2, url, strSymbolInfo2,
+		url, strSymbolInfo3, url, strSymbolInfo3,
+		url, strSymbolInfo4, url, strSymbolInfo4,
+		url, strSymbolInfo5, url, strSymbolInfo5,
+
+		url, strHistoryInfo1, url, strHistoryInfo1,
+		url, strHistoryInfo2, url, strHistoryInfo2,
+		url, strHistoryInfo3, url, strHistoryInfo3,
+
+		url, strSymbolInfo1, url, strSymbolInfo1,
 		// url, fpathMonth1, url, fpathMonth1,
 		// url, fpathYear2, url, fpathYear2,
 	)
 }
 
+// 生成HTML的构造函数
+func BuildHTML2(cfg HTMLConfig) string {
+	url := cfg.HostURL
+	// 获取当前时间
+	now := time.Now()
+	// 格式化当前日期为 "YYYY-MM-DD" 格式
+	today := now.Format("2006-01-02")
+	strCurYear := now.Format("2006")
+	strCurMonth := now.Format("01")
+	// strDay := now.Format("02")
+	// strDate := strYear + "-" + strMonth + "-" + strDay
+
+	strPreMonth := now.AddDate(0, -1, 0).Format("2006-01-02")
+	strPreDay := now.AddDate(0, 0, -1).Format("2006-01-02")
+	preYear := now.AddDate(-1, 0, 0)
+	strYear1 := preYear.Format("2006")
+	strPreYear := preYear.Format("2006-01-02")
+
+	syms := "SHSE.601088,SZSE.300917"
+	sym := cfg.Symbol
+	idx := cfg.Sididx
+	//===================================================================
+
+	//=============================================================
+	builder := strings.Builder{}
+	strHead := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>GM-API [go] -> [ %s ] </title></head>
+<body>
+    <h1>GM-API (go语言版本)</h1>
+    <h2>服务器 : %s </h2>
+    <h3>当前日期 : %s </h3>
+`, cfg.ServerTag, cfg.ServerTag, today)
+	builder.WriteString(strHead)
+
+	//=============================================================
+	strTest := fmt.Sprintf(`
+    <ul>
+        <li>说明: <a href="http://%s/usage" target="_blank">http://%s/usage</a></li>
+        <li>测试1: <a href="http://%s/test" target="_blank">http://%s/test</a></li>
+        <li>测试2: <a href="http://%s/test2" target="_blank">http://%s/test2</a></li>
+        <li>测试3: <a href="http://%s/test3" target="_blank">http://%s/test3</a></li>
+    </ul>
+`,
+		url, url,
+		url, url,
+		url, url,
+		url, url,
+	)
+	builder.WriteString(strTest)
+
+	//=============================================================
+	strDatePrevN1 := "prevn?date=" + today + "&count=10"
+	strDatePrevN2 := "prevn?date=" + today + "&count=10&include=false"
+	strDatePrevN3 := "prevn?date=" + today + "&count=365"
+	strDateNextN1 := "nextn?date=" + today + "&count=10"
+	strDateNextN2 := "nextn?date=" + today + "&count=10&include=false"
+
+	strDatesList1 := "dateslist?sdate=" + strPreMonth
+	strDatesList2 := "dateslist?sdate=" + strPreYear + "&edate=" + strPreMonth
+
+	// strTradeCalendar1 := "calendar"
+	strTradeCalendar1 := "calendar"
+	strTradeCalendar2 := "calendar?eyear=" + strYear1
+	strTradeCalendar3 := "calendar?syear=" + strYear1 + "&eyear=" + strCurYear
+	strTradeCalendar4 := "calendar?syear=" + "2005"
+
+	strCalendar := fmt.Sprintf(`
+    <h3>交易日历</h3>
+    <ul>
+        <li>前N: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+        <li>前N: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+        <li>前N: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li><br>
+        <li>后N: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+        <li>后N: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li><br>
+        <li>交易列表: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+        <li>交易列表: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li><br>
+        <li>日历(当年): <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+        <li>日历(去年): <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+        <li>日历(两年): <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+        <li>日历(2005~): <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
+    </ul>
+`,
+		url, strDatePrevN1, url, strDatePrevN1,
+		url, strDatePrevN2, url, strDatePrevN2,
+		url, strDatePrevN3, url, strDatePrevN3,
+		url, strDateNextN1, url, strDateNextN1,
+		url, strDateNextN2, url, strDateNextN2,
+
+		url, strDatesList1, url, strDatesList1,
+		url, strDatesList2, url, strDatesList2,
+
+		url, strTradeCalendar1, url, strTradeCalendar1,
+		url, strTradeCalendar2, url, strTradeCalendar2,
+		url, strTradeCalendar3, url, strTradeCalendar3,
+		url, strTradeCalendar4, url, strTradeCalendar4,
+	)
+	builder.WriteString(strCalendar)
+
+	//=============================================================
+	kbGM1 := "gm1m?symbol=" + sym
+	kbGM2 := "gm1m?symbol=" + sym + "&time_stamp=true"
+	kbGM3 := "gm1m?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
+	kbGM4 := "gm1m?symbol=" + sym + "&sdate=" + strPreYear + "&edate=" + today
+	kbGM5 := "gm1m?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&include=false"
+	kbGM6 := "api1m?symbol=" + sym
+	kbGM7 := "api1m?symbol=" + sym + "&time_stamp=true"
+	kbGM8 := "api1m?symbol=" + sym + "&sdate=" + strPreDay + "&edate=" + today
+	kbGM9 := "api1m?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
+
+	kbCSV1 := "csvyear?symbol=" + sym + "&year=" + strCurYear
+	kbCSV2 := "csvyear?symbol=" + sym + "&year=" + strCurYear + "&time_stamp=true"
+	kbCSV3 := "csvmonth?symbol=" + sym + "&year=" + strCurYear + "&month=" + strCurMonth
+	kbCSV4 := "csv1m?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + strPreMonth
+	kbCSV5 := "csvtag?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
+	kbCSV6 := "csvtag?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&tag=pe"
+	kbCSV7 := "csvtag?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&tag=vv" + "&clip=false"
+
+	kbAPI1 := "kbars?symbols=" + sym
+	kbAPI2 := "kbars?symbols=" + syms
+	kbAPI3 := "kbars?symbols=" + syms + "&time_stamp=true"
+	kbAPI4 := "kbars?symbols=" + syms + "&sdate=" + strPreMonth + "&edate=" + today
+	kbAPI5 := "kbars?symbols=" + syms + "&sdate=" + strPreYear + "&edate=" + today + "&tag=1d"
+	kbAPI6 := "kbars?symbols=" + syms + "&sdate=" + strPreYear + "&edate=" + today + "&tag=1d" + "&time_stamp=true"
+	kbAPI7 := "kbarsn?symbol=" + sym + "&count=90" + "&tag=1m"
+	kbAPI8 := "kbarsn?symbol=" + sym + "&count=30" + "&edate=" + today + "&tag=1d"
+	kbAPI9 := "kbarsn?symbol=" + sym + "&count=30" + "&edate=" + today + "&tag=1d" + `&time_stamp=true`
+
+	strKBars := fmt.Sprintf(`
+    <h3>历史行情</h3>
+    <ul>
+		<li>综合接口(1m) : <br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<br>
+		<li>CSV接口 : <br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<br>
+		<li>API接口 : <br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+    </ul>
+`,
+		url, kbGM1, url, kbGM1,
+		url, kbGM2, url, kbGM2,
+		url, kbGM3, url, kbGM3,
+		url, kbGM4, url, kbGM4,
+		url, kbGM5, url, kbGM5,
+		url, kbGM6, url, kbGM6,
+		url, kbGM7, url, kbGM7,
+		url, kbGM8, url, kbGM8,
+		url, kbGM9, url, kbGM9,
+
+		url, kbCSV1, url, kbCSV1,
+		url, kbCSV2, url, kbCSV2,
+		url, kbCSV3, url, kbCSV3,
+		url, kbCSV4, url, kbCSV4,
+		url, kbCSV5, url, kbCSV5,
+		url, kbCSV6, url, kbCSV6,
+		url, kbCSV7, url, kbCSV7,
+
+		url, kbAPI1, url, kbAPI1,
+		url, kbAPI2, url, kbAPI2,
+		url, kbAPI3, url, kbAPI3,
+		url, kbAPI4, url, kbAPI4,
+		url, kbAPI5, url, kbAPI5,
+		url, kbAPI6, url, kbAPI6,
+		url, kbAPI7, url, kbAPI7,
+		url, kbAPI8, url, kbAPI8,
+		url, kbAPI9, url, kbAPI9,
+	)
+	builder.WriteString(strKBars)
+
+	//=============================================================
+	strMarketInfo1 := "market_info?sec=stock"
+	strMarketInfo2 := "market_info?sec=index"
+	strMarketInfo3 := "market_info?sec=fund"
+
+	strSymbolInfo1 := "symbols_info?sec=stock"
+	strSymbolInfo2 := "symbols_info?sec=stock&symbols=" + sym
+	strSymbolInfo3 := "symbols_info?sec=stock&symbols=" + syms
+	strSymbolInfo4 := "symbols_info?sec=index"
+	strSymbolInfo5 := "symbols_info?sec=index&symbols=" + idx
+
+	strHistoryInfo1 := "history_info?symbol=" + sym
+	strHistoryInfo2 := "history_info?symbol=" + sym + "&sdate=" + strPreYear
+	strHistoryInfo3 := "history_info?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
+
+	strInfo := fmt.Sprintf(`
+    <h3>基本资料</h3>
+    <ul>
+		<li>市场信息 : <br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<li>个股信息 : <br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<li>个股历史信息 : <br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+    </ul>
+`,
+		url, strMarketInfo1, url, strMarketInfo1,
+		url, strMarketInfo2, url, strMarketInfo2,
+		url, strMarketInfo3, url, strMarketInfo3,
+
+		url, strSymbolInfo1, url, strSymbolInfo1,
+		url, strSymbolInfo2, url, strSymbolInfo2,
+		url, strSymbolInfo3, url, strSymbolInfo3,
+		url, strSymbolInfo4, url, strSymbolInfo4,
+		url, strSymbolInfo5, url, strSymbolInfo5,
+
+		url, strHistoryInfo1, url, strHistoryInfo1,
+		url, strHistoryInfo2, url, strHistoryInfo2,
+		url, strHistoryInfo3, url, strHistoryInfo3,
+	)
+	builder.WriteString(strInfo)
+
+	//=============================================================
+	strTail := `
+	<br><br>
+</body>
+</html>`
+	builder.WriteString(strTail)
+
+	//===================================================================
+	// fmt.Println(builder.String())
+	return builder.String()
+}
 func RouteUsage(c *gin.Context) {
 	hostURL := c.Request.Host
 
-	html := BuildHTML(HTMLConfig{
+	html := BuildHTML2(HTMLConfig{
 		ServerTag: serverTag,
 		HostURL:   hostURL,
 		Symbol:    "SHSE.601088",
@@ -269,7 +606,8 @@ func RouteTest3(c *gin.Context) {
 }
 
 func RouteCalendar2(c *gin.Context) {
-	yy := fmt.Sprintf("%d", time.Now().Year())
+	// yy := fmt.Sprintf("%d", time.Now().Year())
+	yy := time.Now().Format("2006")
 	syear := c.DefaultQuery("syear", yy)
 	eyear := c.DefaultQuery("eyear", yy)
 	exchange := c.DefaultQuery("exchange", "")
@@ -317,9 +655,14 @@ func RouteCalendar2(c *gin.Context) {
 }
 
 func RouteCalendar(c *gin.Context) {
-	yy := fmt.Sprintf("%d", time.Now().Year())
+	// yy := fmt.Sprintf("%d", time.Now().Year())
+	yy := time.Now().Format("2006")
 	syear := c.DefaultQuery("syear", yy)
 	eyear := c.DefaultQuery("eyear", yy)
+	if syear > eyear {
+		syear = eyear
+	}
+
 	exchange := c.DefaultQuery("exchange", "")
 	timeoutSeconds := 30
 
@@ -346,6 +689,19 @@ func RouteCalendar(c *gin.Context) {
 	c.JSON(http.StatusOK, records)
 }
 
+func RouteDatesList(c *gin.Context) {
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+
+	timeoutSeconds := 30
+	rawData, err := gm.GetDatesList(gmapi, sdate, edate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetDatesList)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
 func RouteDatesPrevN(c *gin.Context) {
 	today := time.Now().Format("2006-01-02")
 	date := c.DefaultQuery("date", "")
@@ -367,7 +723,7 @@ func RouteDatesPrevN(c *gin.Context) {
 
 	timeoutSeconds := 30
 	// rawData, err := gm.GetPrevNByte(gmapi, date, count, timeoutSeconds, isinclude)
-	rawData, err := gm.GetPrevN(gmapi, date, count, timeoutSeconds, isinclude)
+	rawData, err := gm.GetPrevN(gmapi, date, count, isinclude, timeoutSeconds)
 	if err != nil {
 		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetPrevN)": err.Error()})
 		return
@@ -397,7 +753,7 @@ func RouteDatesNextN(c *gin.Context) {
 
 	timeoutSeconds := 30
 	// rawData, err := gm.GetNextNByte(gmapi, date, count, timeoutSeconds, isinclude)
-	rawData, err := gm.GetNextN(gmapi, date, count, timeoutSeconds, isinclude)
+	rawData, err := gm.GetNextN(gmapi, date, count, isinclude, timeoutSeconds)
 	if err != nil {
 		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetNextN)": err.Error()})
 		return
@@ -438,10 +794,598 @@ func RouteCurrent(c *gin.Context) {
 	// c.JSON(http.StatusOK, records)
 }
 
+func RouteDailyValuation(c *gin.Context) {
+	symbols := c.DefaultQuery("symbol", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+	fields := c.DefaultQuery("fields", "")
+
+	rawData, err := gm.GetDailyValuation(gmapi, symbols, sdate, edate, fields, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetDailyValuation)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteDailyBasic(c *gin.Context) {
+	symbols := c.DefaultQuery("symbol", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+	fields := c.DefaultQuery("fields", "")
+
+	rawData, err := gm.GetDailyBasic(gmapi, symbols, sdate, edate, fields, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetDailyBasic)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteDailyMktvalue(c *gin.Context) {
+	symbols := c.DefaultQuery("symbol", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+	fields := c.DefaultQuery("fields", "")
+
+	rawData, err := gm.GetDailyMktvalue(gmapi, symbols, sdate, edate, fields, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetDailyMktvalue)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteFinancePrime(c *gin.Context) {
+	symbols := c.DefaultQuery("symbol", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+	fields := c.DefaultQuery("fields", "")
+	rpt_type := c.DefaultQuery("rpt_type", "")
+	data_type := c.DefaultQuery("data_type", "")
+
+	rawData, err := gm.GetFinancePrime(gmapi, symbols, sdate, edate, fields, rpt_type, data_type, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFinancePrime)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteFinanceDeriv(c *gin.Context) {
+	symbols := c.DefaultQuery("symbol", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+	fields := c.DefaultQuery("fields", "")
+	rpt_type := c.DefaultQuery("rpt_type", "")
+	data_type := c.DefaultQuery("data_type", "")
+
+	rawData, err := gm.GetFinanceDeriv(gmapi, symbols, sdate, edate, fields, rpt_type, data_type, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFinanceDeriv)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+func RouteFundamentalsCashflow(c *gin.Context) {
+	symbols := c.DefaultQuery("symbol", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+	fields := c.DefaultQuery("fields", "")
+	rpt_type := c.DefaultQuery("rpt_type", "")
+	data_type := c.DefaultQuery("data_type", "")
+
+	rawData, err := gm.GetFundamentalsCashflow(gmapi, symbols, sdate, edate, fields, rpt_type, data_type, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFundamentalsCashflow)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteFundamentalsIncome(c *gin.Context) {
+	symbols := c.DefaultQuery("symbol", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+	fields := c.DefaultQuery("fields", "")
+	rpt_type := c.DefaultQuery("rpt_type", "")
+	data_type := c.DefaultQuery("data_type", "")
+
+	rawData, err := gm.GetFundamentalsIncome(gmapi, symbols, sdate, edate, fields, rpt_type, data_type, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFundamentalsIncome)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteFundamentalsBalance(c *gin.Context) {
+	symbols := c.DefaultQuery("symbol", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+	fields := c.DefaultQuery("fields", "")
+	rpt_type := c.DefaultQuery("rpt_type", "")
+	data_type := c.DefaultQuery("data_type", "")
+
+	rawData, err := gm.GetFundamentalsBalance(gmapi, symbols, sdate, edate, fields, rpt_type, data_type, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFundamentalsBalance)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteFundamentalsBalancePt(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	// sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("date", "")
+	fields := c.DefaultQuery("fields", "")
+	rpt_type := c.DefaultQuery("rpt_type", "")
+	data_type := c.DefaultQuery("data_type", "")
+
+	rawData, err := gm.GetFundamentalsBalancePt(gmapi, symbols, edate, fields, rpt_type, data_type, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFundamentalsBalancePt)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteFundamentalsCashflowPt(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	// sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("date", "")
+	fields := c.DefaultQuery("fields", "")
+	rpt_type := c.DefaultQuery("rpt_type", "")
+	data_type := c.DefaultQuery("data_type", "")
+
+	rawData, err := gm.GetFundamentalsCashflowPt(gmapi, symbols, edate, fields, rpt_type, data_type, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFundamentalsCashflowPt)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteFundamentalsIncomePt(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	// sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("date", "")
+	fields := c.DefaultQuery("fields", "")
+	rpt_type := c.DefaultQuery("rpt_type", "")
+	data_type := c.DefaultQuery("data_type", "")
+
+	rawData, err := gm.GetFundamentalsIncomePt(gmapi, symbols, edate, fields, rpt_type, data_type, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFundamentalsIncomePt)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteFinancePrimePt(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	// sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("date", "")
+	fields := c.DefaultQuery("fields", "")
+	rpt_type := c.DefaultQuery("rpt_type", "")
+	data_type := c.DefaultQuery("data_type", "")
+
+	rawData, err := gm.GetFinancePrimePt(gmapi, symbols, edate, fields, rpt_type, data_type, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFinancePrimePt)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteFinanceDerivPt(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	// sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("date", "")
+	fields := c.DefaultQuery("fields", "")
+	rpt_type := c.DefaultQuery("rpt_type", "")
+	data_type := c.DefaultQuery("data_type", "")
+
+	rawData, err := gm.GetFinanceDerivPt(gmapi, symbols, edate, fields, rpt_type, data_type, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetFinanceDerivPt)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteDailyValuationPt(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	// sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("date", "")
+	fields := c.DefaultQuery("fields", "")
+
+	rawData, err := gm.GetDailyValuationPt(gmapi, symbols, edate, fields, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetDailyValuationPt)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteDailyBasicPt(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	// sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("date", "")
+	fields := c.DefaultQuery("fields", "")
+
+	rawData, err := gm.GetDailyBasicPt(gmapi, symbols, edate, fields, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetDailyBasicPt)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteDailyMktvaluePt(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	// sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("date", "")
+	fields := c.DefaultQuery("fields", "")
+
+	rawData, err := gm.GetDailyMktvaluePt(gmapi, symbols, edate, fields, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetDailyMktvaluePt)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteSectorCategory(c *gin.Context) {
+	symbols := c.DefaultQuery("sector_type", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("sector_type 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	// sdate := c.DefaultQuery("sdate", "")
+	// edate := c.DefaultQuery("edate", "")
+	// bdate := c.DefaultQuery("bdate", "")
+
+	rawData, err := gm.GetSectorCategory(gmapi, symbols, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetSectorCategory)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteSectorConstituents(c *gin.Context) {
+	symbols := c.DefaultQuery("sector_code", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("sector_code 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	// sdate := c.DefaultQuery("sdate", "")
+	// edate := c.DefaultQuery("edate", "")
+	// bdate := c.DefaultQuery("bdate", "")
+
+	rawData, err := gm.GetSectorConstituents(gmapi, symbols, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetSectorConstituents)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteSymbolsSector(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sector_type", "")
+	// edate := c.DefaultQuery("edate", "")
+	// bdate := c.DefaultQuery("bdate", "")
+
+	rawData, err := gm.GetSymbolsSector(gmapi, symbols, sdate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetSymbolsSector)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteDvidend(c *gin.Context) {
+	symbols := c.DefaultQuery("symbol", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+	// bdate := c.DefaultQuery("bdate", "")
+
+	rawData, err := gm.GetDividend(gmapi, symbols, sdate, edate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetDividend)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteRation(c *gin.Context) {
+	symbols := c.DefaultQuery("symbol", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+	// bdate := c.DefaultQuery("bdate", "")
+
+	rawData, err := gm.GetRation(gmapi, symbols, sdate, edate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetRation)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteShareholderNum(c *gin.Context) {
+	symbols := c.DefaultQuery("symbol", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+	// bdate := c.DefaultQuery("bdate", "")
+
+	rawData, err := gm.GetShareholderNum(gmapi, symbols, sdate, edate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetShareholderNum)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteShareChange(c *gin.Context) {
+	symbols := c.DefaultQuery("symbol", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+	// bdate := c.DefaultQuery("bdate", "")
+
+	rawData, err := gm.GetShareChange(gmapi, symbols, sdate, edate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetShareChange)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteAdjFactor(c *gin.Context) {
+	symbols := c.DefaultQuery("symbol", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+	bdate := c.DefaultQuery("bdate", "")
+
+	rawData, err := gm.GetAdjFactor(gmapi, symbols, sdate, edate, bdate, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetAdjFactor)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteTopShareholder(c *gin.Context) {
+	symbols := c.DefaultQuery("symbol", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", "")
+	edate := c.DefaultQuery("edate", "")
+	tradable_holder := c.DefaultQuery("tradable_holder", "")
+
+	rawData, err := gm.GetTopShareholder(gmapi, symbols, sdate, edate, tradable_holder, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetTopShareholder)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteAbnorChangeStock(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("trade_date", "")
+	fields := c.DefaultQuery("fields", "")
+	change_types := c.DefaultQuery("change_types", "")
+	// edate := c.DefaultQuery("edate", "")
+
+	rawData, err := gm.GetAbnorChangeStocks(gmapi, symbols, change_types, sdate, fields, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetAbnorChangeStocks)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteAbnorChangeDetail(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	// today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("trade_date", "")
+	fields := c.DefaultQuery("fields", "")
+	change_types := c.DefaultQuery("change_types", "")
+	// edate := c.DefaultQuery("edate", "")
+
+	rawData, err := gm.GetAbnorChangeDetail(gmapi, symbols, change_types, sdate, fields, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetAbnorChangeDetail)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
 func RouteHKInstHoldingInfo(c *gin.Context) {
 	symbols := c.DefaultQuery("symbols", "")
 	if symbols == "" {
-		c.JSON(http.StatusBadRequest, fmt.Errorf("types 参数为必须"))
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
 		return
 	}
 
@@ -462,7 +1406,7 @@ func RouteHKInstHoldingInfo(c *gin.Context) {
 func RouteHKInstHoldingDetailInfo(c *gin.Context) {
 	symbols := c.DefaultQuery("symbols", "")
 	if symbols == "" {
-		c.JSON(http.StatusBadRequest, fmt.Errorf("types 参数为必须"))
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
 		return
 	}
 
@@ -797,7 +1741,38 @@ func RouteHistoryInfo(c *gin.Context) {
 
 	rawData, err := gm.GetHistoryInfo(gmapi, symbol, sdate, edate, timeoutSeconds)
 	if err != nil {
-		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetKbarsHis)": err.Error()})
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetHistoryInfo)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteGMApi1m(c *gin.Context) {
+	symbols := c.DefaultQuery("symbol", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	timeoutSeconds := 30
+	today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("sdate", today)
+	edate := c.DefaultQuery("edate", today)
+	// tag := c.DefaultQuery("tag", "1m")
+
+	timestamp := c.DefaultQuery("time_stamp", "false")
+	istimestamp := false
+	if timestamp == "true" {
+		istimestamp = true
+	}
+	datesList, _ := gm.GetDatesList(gmapi, sdate, edate, timeoutSeconds)
+	if len(datesList) == 0 {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetDatesList)": "日期列表为空 " + sdate + "~" + edate})
+		return
+	}
+	rawData, err := gm.Get1mByDatelist(gmapi, symbols, datesList, istimestamp, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.Get1mByDatelist)": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, rawData)
@@ -814,7 +1789,7 @@ func RouteKbars(c *gin.Context) {
 	sdate := c.DefaultQuery("sdate", today)
 	edate := c.DefaultQuery("edate", today)
 	tag := c.DefaultQuery("tag", "1m")
-	timestamp := c.DefaultQuery("timestamp", "false")
+	timestamp := c.DefaultQuery("time_stamp", "false")
 	timeoutSeconds := 30
 
 	istimestamp := false
@@ -856,7 +1831,7 @@ func RouteKBDict(c *gin.Context) {
 	sdate := c.DefaultQuery("sdate", today)
 	edate := c.DefaultQuery("edate", today)
 	tag := c.DefaultQuery("tag", "1m")
-	timestamp := c.DefaultQuery("timestamp", "false")
+	timestamp := c.DefaultQuery("time_stamp", "false")
 	timeoutSeconds := 30
 
 	istimestamp := false
@@ -884,7 +1859,7 @@ func RouteKBDictTS(c *gin.Context) {
 	sdate := c.DefaultQuery("sdate", today)
 	edate := c.DefaultQuery("edate", today)
 	tag := c.DefaultQuery("tag", "1m")
-	timestamp := c.DefaultQuery("timestamp", "false")
+	timestamp := c.DefaultQuery("time_stamp", "false")
 	timeoutSeconds := 30
 
 	istimestamp := false
@@ -916,7 +1891,7 @@ func RouteKbarsN(c *gin.Context) {
 	edate := c.DefaultQuery("edate", today)
 	count := c.DefaultQuery("count", "")
 	tag := c.DefaultQuery("tag", "1d")
-	timestamp := c.DefaultQuery("timestamp", "false")
+	timestamp := c.DefaultQuery("time_stamp", "false")
 	timeoutSeconds := 30
 
 	istimestamp := false
@@ -951,7 +1926,7 @@ func RouteCSVxzMonth(c *gin.Context) {
 	// tag := c.DefaultQuery("tag", "1m")
 	imonth, _ := strconv.Atoi(cmonth)
 	iyear, _ := strconv.Atoi(cyear)
-	timestamp := c.DefaultQuery("timestamp", "false")
+	timestamp := c.DefaultQuery("time_stamp", "false")
 	istimestamp := false
 	if timestamp == "true" {
 		istimestamp = true
@@ -989,7 +1964,7 @@ func RouteCSVxzYear(c *gin.Context) {
 
 	cyear := c.DefaultQuery("year", yearStr)
 	tag := c.DefaultQuery("tag", "1m")
-	timestamp := c.DefaultQuery("timestamp", "false")
+	timestamp := c.DefaultQuery("time_stamp", "false")
 	istimestamp := false
 	if timestamp == "true" {
 		istimestamp = true
@@ -1034,7 +2009,7 @@ func RouteCSVxz1m(c *gin.Context) {
 	edate := c.DefaultQuery("edate", today)
 	// tag := c.DefaultQuery("tag", "1m")
 
-	timestamp := c.DefaultQuery("timestamp", "false")
+	timestamp := c.DefaultQuery("time_stamp", "false")
 	istimestamp := false
 	if timestamp == "true" {
 		istimestamp = true
@@ -1077,7 +2052,7 @@ func RouteCSVxzTag(c *gin.Context) {
 	edate := c.DefaultQuery("edate", today)
 	tag := c.DefaultQuery("tag", "vv")
 
-	timestamp := c.DefaultQuery("timestamp", "false")
+	timestamp := c.DefaultQuery("time_stamp", "false")
 	istimestamp := false
 	if timestamp == "true" {
 		istimestamp = true
@@ -1112,7 +2087,7 @@ func RouteGM1m(c *gin.Context) {
 
 	// tag := c.DefaultQuery("tag", "1m")
 
-	timestamp := c.DefaultQuery("timestamp", "false")
+	timestamp := c.DefaultQuery("time_stamp", "false")
 	istimestamp := false
 	if timestamp == "true" {
 		istimestamp = true

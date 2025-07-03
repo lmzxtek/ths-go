@@ -1,0 +1,328 @@
+package main
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"time"
+
+	_ "github.com/mattn/go-sqlite3"
+)
+
+// 股票数据结构体
+type StockData struct {
+	Symbol    string  `json:"symbol"`
+	Name      string  `json:"name"`
+	Price     float64 `json:"price"`
+	Change    float64 `json:"change"`
+	Volume    int64   `json:"volume"`
+	Timestamp string  `json:"timestamp"`
+}
+
+// API响应结构体
+type APIResponse struct {
+	Success bool        `json:"success"`
+	Data    []StockData `json:"data"`
+	Message string      `json:"message"`
+}
+
+func main_0() {
+	// 初始化数据库
+	db, err := initDatabase()
+	if err != nil {
+		log.Fatal("初始化数据库失败:", err)
+	}
+	defer db.Close()
+
+	// 模拟的股票API URL (实际使用时替换为真实的API)
+	// 例如: Alpha Vantage, Yahoo Finance, 或其他金融数据提供商
+	// apiURL := "https://api.example.com/stocks/realtime"
+	// stockData, err := fetchStockData(apiURL)
+
+	// 获取股票数据
+	stockData, err := fetchMockStockData()
+	if err != nil {
+		log.Fatal("获取股票数据失败:", err)
+	}
+
+	// 保存数据到数据库
+	err = saveStockData(db, stockData)
+	if err != nil {
+		log.Fatal("保存数据失败:", err)
+	}
+
+	fmt.Printf("成功保存 %d 条股票数据\n", len(stockData))
+
+	// 查询并显示保存的数据
+	err = displayStockData(db)
+	if err != nil {
+		log.Fatal("查询数据失败:", err)
+	}
+}
+
+// 初始化SQLite数据库
+func initDatabase() (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", "./stocks.db")
+	if err != nil {
+		return nil, err
+	}
+
+	// 创建股票数据表
+	createTableSQL := `
+	CREATE TABLE IF NOT EXISTS stocks (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		symbol TEXT NOT NULL,
+		name TEXT NOT NULL,
+		price REAL NOT NULL,
+		change_amount REAL NOT NULL,
+		volume INTEGER NOT NULL,
+		timestamp DATETIME NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+	
+	CREATE INDEX IF NOT EXISTS idx_symbol ON stocks(symbol);
+	CREATE INDEX IF NOT EXISTS idx_timestamp ON stocks(timestamp);
+	`
+
+	_, err = db.Exec(createTableSQL)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
+// 从API获取股票数据
+func fetchStockData(url string) ([]StockData, error) {
+	// 创建HTTP客户端，设置超时
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	// 发送GET请求
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP请求失败: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// 检查响应状态码
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API返回错误状态码: %d", resp.StatusCode)
+	}
+
+	// 读取响应体
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("读取响应体失败: %v", err)
+	}
+
+	// 解析JSON数据
+	var apiResponse APIResponse
+	err = json.Unmarshal(body, &apiResponse)
+	if err != nil {
+		return nil, fmt.Errorf("解析JSON失败: %v", err)
+	}
+
+	// 检查API响应是否成功
+	if !apiResponse.Success {
+		return nil, fmt.Errorf("API响应错误: %s", apiResponse.Message)
+	}
+
+	return apiResponse.Data, nil
+}
+
+// 模拟API数据（用于演示）
+func fetchMockStockData() ([]StockData, error) {
+	// 模拟API返回的JSON数据
+	mockData := []StockData{
+		{
+			Symbol:    "AAPL",
+			Name:      "Apple Inc.",
+			Price:     182.52,
+			Change:    1.25,
+			Volume:    45230000,
+			Timestamp: time.Now().Format(time.RFC3339),
+		},
+		{
+			Symbol:    "GOOGL",
+			Name:      "Alphabet Inc.",
+			Price:     2756.43,
+			Change:    -15.67,
+			Volume:    1245000,
+			Timestamp: time.Now().Format(time.RFC3339),
+		},
+		{
+			Symbol:    "MSFT",
+			Name:      "Microsoft Corporation",
+			Price:     378.91,
+			Change:    3.45,
+			Volume:    28450000,
+			Timestamp: time.Now().Format(time.RFC3339),
+		},
+		{
+			Symbol:    "TSLA",
+			Name:      "Tesla Inc.",
+			Price:     245.67,
+			Change:    -8.23,
+			Volume:    67890000,
+			Timestamp: time.Now().Format(time.RFC3339),
+		},
+	}
+
+	return mockData, nil
+}
+
+// 保存股票数据到数据库
+func saveStockData(db *sql.DB, stocks []StockData) error {
+	// 准备插入语句
+	insertSQL := `
+	INSERT INTO stocks (symbol, name, price, change_amount, volume, timestamp)
+	VALUES (?, ?, ?, ?, ?, ?)
+	`
+
+	stmt, err := db.Prepare(insertSQL)
+	if err != nil {
+		return fmt.Errorf("准备SQL语句失败: %v", err)
+	}
+	defer stmt.Close()
+
+	// 开始事务
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("开始事务失败: %v", err)
+	}
+
+	// 批量插入数据
+	for _, stock := range stocks {
+		// 解析时间戳
+		timestamp, err := time.Parse(time.RFC3339, stock.Timestamp)
+		if err != nil {
+			// 如果解析失败，使用当前时间
+			timestamp = time.Now()
+		}
+
+		_, err = tx.Stmt(stmt).Exec(
+			stock.Symbol,
+			stock.Name,
+			stock.Price,
+			stock.Change,
+			stock.Volume,
+			timestamp,
+		)
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("插入数据失败: %v", err)
+		}
+	}
+
+	// 提交事务
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("提交事务失败: %v", err)
+	}
+
+	return nil
+}
+
+// 查询并显示股票数据
+func displayStockData(db *sql.DB) error {
+	query := `
+	SELECT symbol, name, price, change_amount, volume, timestamp, created_at
+	FROM stocks
+	ORDER BY created_at DESC
+	LIMIT 10
+	`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return fmt.Errorf("查询数据失败: %v", err)
+	}
+	defer rows.Close()
+
+	fmt.Println("\n最近保存的股票数据:")
+	fmt.Println("Symbol\tName\t\t\tPrice\tChange\tVolume\t\tTimestamp")
+	fmt.Println("------\t----\t\t\t-----\t------\t------\t\t---------")
+
+	for rows.Next() {
+		var stock StockData
+		var createdAt time.Time
+
+		err := rows.Scan(
+			&stock.Symbol,
+			&stock.Name,
+			&stock.Price,
+			&stock.Change,
+			&stock.Volume,
+			&stock.Timestamp,
+			&createdAt,
+		)
+		if err != nil {
+			return fmt.Errorf("扫描数据失败: %v", err)
+		}
+
+		fmt.Printf("%s\t%-20s\t%.2f\t%.2f\t%d\t%s\n",
+			stock.Symbol,
+			stock.Name,
+			stock.Price,
+			stock.Change,
+			stock.Volume,
+			createdAt.Format("2006-01-02 15:04:05"),
+		)
+	}
+
+	return nil
+}
+
+// 获取特定股票的历史数据
+func getStockHistory(db *sql.DB, symbol string, days int) ([]StockData, error) {
+	query := `
+	SELECT symbol, name, price, change_amount, volume, timestamp
+	FROM stocks
+	WHERE symbol = ? AND created_at >= datetime('now', '-' || ? || ' days')
+	ORDER BY created_at DESC
+	`
+
+	rows, err := db.Query(query, symbol, days)
+	if err != nil {
+		return nil, fmt.Errorf("查询历史数据失败: %v", err)
+	}
+	defer rows.Close()
+
+	var stocks []StockData
+	for rows.Next() {
+		var stock StockData
+		err := rows.Scan(
+			&stock.Symbol,
+			&stock.Name,
+			&stock.Price,
+			&stock.Change,
+			&stock.Volume,
+			&stock.Timestamp,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("扫描历史数据失败: %v", err)
+		}
+		stocks = append(stocks, stock)
+	}
+
+	return stocks, nil
+}
+
+// 如果要使用模拟数据进行测试，可以修改main函数中的fetchStockData调用:
+/*
+func main() {
+	// ... 其他代码 ...
+
+	// 使用模拟数据而不是真实API
+	stockData, err := fetchMockStockData()
+	if err != nil {
+		log.Fatal("获取模拟股票数据失败:", err)
+	}
+
+	// ... 其他代码 ...
+}
+*/

@@ -1,0 +1,551 @@
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
+
+	_ "github.com/mattn/go-sqlite3"
+)
+
+// 紧凑时间戳类型定义
+type CompactTimestamp int64
+
+// 基准时间：2020-01-01 00:00:00 UTC
+var baseTime = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+
+// 将时间转换为紧凑格式（相对于基准时间的秒数）
+func NewCompactTimestamp(t time.Time) CompactTimestamp {
+	return CompactTimestamp(t.Unix() - baseTime.Unix())
+}
+
+// 将紧凑时间戳转换回时间
+func (ct CompactTimestamp) ToTime() time.Time {
+	return time.Unix(baseTime.Unix()+int64(ct), 0)
+}
+
+// 获取当前时间的紧凑格式
+func NowCompact() CompactTimestamp {
+	return NewCompactTimestamp(time.Now())
+}
+
+type StockDBCompact struct {
+	db            *sql.DB
+	archiveDir    string
+	retentionDays int // 在线数据保留天数
+}
+
+func NewStockDBCompact(dbPath, archiveDir string, retentionDays int) (*StockDBCompact, error) {
+	db, err := sql.Open("sqlite3", dbPath+"?cache=shared&mode=rwc&_journal_mode=WAL")
+	if err != nil {
+		return nil, err
+	}
+
+	// 创建归档目录
+	if err := os.MkdirAll(archiveDir, 0755); err != nil {
+		return nil, fmt.Errorf("创建归档目录失败: %v", err)
+	}
+
+	return &StockDBCompact{
+		db:            db,
+		archiveDir:    archiveDir,
+		retentionDays: retentionDays,
+	}, nil
+}
+
+// 使用紧凑时间戳的表结构
+func (s *StockDBCompact) CreateCompactTables(stockCode string) error {
+	tables := []string{
+		// 使用INTEGER存储紧凑时间戳，节省空间
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS kline_daily_%s (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            trade_date DATE NOT NULL UNIQUE,
+            open_price INTEGER NOT NULL,      -- 存储为分，节省空间
+            high_price INTEGER NOT NULL,
+            low_price INTEGER NOT NULL,
+            close_price INTEGER NOT NULL,
+            volume INTEGER DEFAULT 0,
+            amount INTEGER DEFAULT 0,        -- 存储为分，大数值可能需要BIGINT
+            created_ts INTEGER NOT NULL,     -- 紧凑时间戳
+            updated_ts INTEGER NOT NULL      -- 紧凑时间戳
+        )`, stockCode),
+
+		// 1分钟K线表，使用更紧凑的存储
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS kline_1min_%s (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            trade_time INTEGER NOT NULL UNIQUE,  -- 直接存储UNIX时间戳
+            open_price INTEGER NOT NULL,
+            high_price INTEGER NOT NULL,
+            low_price INTEGER NOT NULL,
+            close_price INTEGER NOT NULL,
+            volume INTEGER DEFAULT 0,
+            amount INTEGER DEFAULT 0,
+            created_ts INTEGER NOT NULL
+        )`, stockCode),
+
+		// 财务数据表
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS financial_derived_%s (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            trade_date DATE NOT NULL UNIQUE,
+            pe_ratio INTEGER,        -- 存储为百分比*100
+            pb_ratio INTEGER,
+            market_cap BIGINT,       -- 市值用分存储
+            turnover_rate INTEGER,   -- 换手率*100
+            created_ts INTEGER NOT NULL,
+            updated_ts INTEGER NOT NULL
+        )`, stockCode),
+	}
+
+	// 创建索引
+	indexes := []string{
+		fmt.Sprintf(`CREATE INDEX IF NOT EXISTS idx_daily_%s_date ON kline_daily_%s (trade_date DESC)`, stockCode, stockCode),
+		fmt.Sprintf(`CREATE INDEX IF NOT EXISTS idx_daily_%s_updated ON kline_daily_%s (updated_ts DESC)`, stockCode, stockCode),
+		fmt.Sprintf(`CREATE INDEX IF NOT EXISTS idx_1min_%s_time ON kline_1min_%s (trade_time DESC)`, stockCode, stockCode),
+	}
+
+	allSQL := append(tables, indexes...)
+
+	for _, sqlStmt := range allSQL {
+		if _, err := s.db.Exec(sqlStmt); err != nil {
+			return fmt.Errorf("执行SQL失败: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// 紧凑数据结构
+type CompactKlineDaily struct {
+	ID         int64            `json:"id"`
+	TradeDate  time.Time        `json:"trade_date"`
+	OpenPrice  int32            `json:"open_price"` // 存储为分
+	HighPrice  int32            `json:"high_price"`
+	LowPrice   int32            `json:"low_price"`
+	ClosePrice int32            `json:"close_price"`
+	Volume     int64            `json:"volume"`
+	Amount     int64            `json:"amount"` // 存储为分
+	CreatedTS  CompactTimestamp `json:"created_ts"`
+	UpdatedTS  CompactTimestamp `json:"updated_ts"`
+}
+
+// 价格转换函数（元转分）
+func PriceToInt(price float64) int32 {
+	return int32(price * 1000) // 精确到毫
+}
+
+func IntToPrice(priceInt int32) float64 {
+	return float64(priceInt) / 1000.0
+}
+
+// 金额转换函数（元转分）
+func AmountToInt(amount float64) int64 {
+	return int64(amount * 100) // 精确到分
+}
+
+func IntToAmount(amountInt int64) float64 {
+	return float64(amountInt) / 100.0
+}
+
+// 插入紧凑格式数据
+func (s *StockDBCompact) InsertCompactDaily(stockCode string, data *CompactKlineDaily) error {
+	now := NowCompact()
+	data.CreatedTS = now
+	data.UpdatedTS = now
+
+	query := fmt.Sprintf(`INSERT INTO kline_daily_%s 
+        (trade_date, open_price, high_price, low_price, close_price, volume, amount, created_ts, updated_ts)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(trade_date) DO UPDATE SET
+            open_price = excluded.open_price,
+            high_price = excluded.high_price,
+            low_price = excluded.low_price,
+            close_price = excluded.close_price,
+            volume = excluded.volume,
+            amount = excluded.amount,
+            updated_ts = ?`, stockCode)
+
+	_, err := s.db.Exec(query, data.TradeDate, data.OpenPrice, data.HighPrice,
+		data.LowPrice, data.ClosePrice, data.Volume, data.Amount,
+		int64(data.CreatedTS), int64(data.UpdatedTS), int64(now))
+
+	return err
+}
+
+// 数据归档系统
+type ArchiveManager struct {
+	db        *StockDBCompact
+	batchSize int
+}
+
+func NewArchiveManager(db *StockDBCompact) *ArchiveManager {
+	return &ArchiveManager{
+		db:        db,
+		batchSize: 10000,
+	}
+}
+
+// 创建归档数据库
+func (am *ArchiveManager) createArchiveDB(stockCode string, year int) (*sql.DB, error) {
+	archivePath := filepath.Join(am.db.archiveDir, fmt.Sprintf("%s_%d_archive.db", stockCode, year))
+
+	archiveDB, err := sql.Open("sqlite3", archivePath)
+	if err != nil {
+		return nil, err
+	}
+
+	// 创建归档表结构（与主表相同但不需要索引）
+	createTableSQL := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS kline_daily_archive (
+        id INTEGER PRIMARY KEY,
+        trade_date DATE NOT NULL,
+        open_price INTEGER NOT NULL,
+        high_price INTEGER NOT NULL,
+        low_price INTEGER NOT NULL,
+        close_price INTEGER NOT NULL,
+        volume INTEGER DEFAULT 0,
+        amount INTEGER DEFAULT 0,
+        created_ts INTEGER NOT NULL,
+        updated_ts INTEGER NOT NULL,
+        archived_ts INTEGER DEFAULT (strftime('%%s', 'now'))
+    )`)
+
+	if _, err := archiveDB.Exec(createTableSQL); err != nil {
+		archiveDB.Close()
+		return nil, err
+	}
+
+	// 创建简单索引
+	indexSQL := `CREATE INDEX IF NOT EXISTS idx_archive_date ON kline_daily_archive (trade_date)`
+	if _, err := archiveDB.Exec(indexSQL); err != nil {
+		archiveDB.Close()
+		return nil, err
+	}
+
+	return archiveDB, nil
+}
+
+// 归档指定年份的数据
+func (am *ArchiveManager) ArchiveDataByYear(stockCode string, year int) error {
+	fmt.Printf("开始归档股票 %s 年份 %d 的数据...\n", stockCode, year)
+
+	// 创建归档数据库
+	archiveDB, err := am.createArchiveDB(stockCode, year)
+	if err != nil {
+		return fmt.Errorf("创建归档数据库失败: %v", err)
+	}
+	defer archiveDB.Close()
+
+	// 查询需要归档的数据
+	selectQuery := fmt.Sprintf(`SELECT id, trade_date, open_price, high_price, low_price, 
+        close_price, volume, amount, created_ts, updated_ts
+        FROM kline_daily_%s 
+        WHERE strftime('%%Y', trade_date) = '%d'
+        ORDER BY trade_date`, stockCode, year)
+
+	rows, err := am.db.db.Query(selectQuery)
+	if err != nil {
+		return fmt.Errorf("查询归档数据失败: %v", err)
+	}
+	defer rows.Close()
+
+	// 开始事务
+	tx, err := archiveDB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	insertSQL := `INSERT INTO kline_daily_archive 
+        (id, trade_date, open_price, high_price, low_price, close_price, volume, amount, created_ts, updated_ts)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+
+	stmt, err := tx.Prepare(insertSQL)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	var archivedCount int
+	var idsToDelete []int64
+
+	for rows.Next() {
+		var record CompactKlineDaily
+		err := rows.Scan(&record.ID, &record.TradeDate, &record.OpenPrice,
+			&record.HighPrice, &record.LowPrice, &record.ClosePrice,
+			&record.Volume, &record.Amount, &record.CreatedTS, &record.UpdatedTS)
+		if err != nil {
+			return fmt.Errorf("扫描数据失败: %v", err)
+		}
+
+		// 插入到归档数据库
+		_, err = stmt.Exec(record.ID, record.TradeDate, record.OpenPrice,
+			record.HighPrice, record.LowPrice, record.ClosePrice,
+			record.Volume, record.Amount, int64(record.CreatedTS), int64(record.UpdatedTS))
+		if err != nil {
+			return fmt.Errorf("插入归档数据失败: %v", err)
+		}
+
+		idsToDelete = append(idsToDelete, record.ID)
+		archivedCount++
+
+		// 批量提交
+		if archivedCount%am.batchSize == 0 {
+			if err := tx.Commit(); err != nil {
+				return fmt.Errorf("提交归档事务失败: %v", err)
+			}
+
+			// 开始新事务
+			if tx, err = archiveDB.Begin(); err != nil {
+				return err
+			}
+			if stmt, err = tx.Prepare(insertSQL); err != nil {
+				return err
+			}
+		}
+	}
+
+	// 提交剩余数据
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("提交最终归档事务失败: %v", err)
+	}
+
+	// 从主表删除已归档的数据
+	if len(idsToDelete) > 0 {
+		if err := am.deleteArchivedData(stockCode, idsToDelete); err != nil {
+			return fmt.Errorf("删除归档数据失败: %v", err)
+		}
+	}
+
+	fmt.Printf("成功归档股票 %s 年份 %d 的 %d 条数据\n", stockCode, year, archivedCount)
+	return nil
+}
+
+// 从主表删除已归档的数据
+func (am *ArchiveManager) deleteArchivedData(stockCode string, ids []int64) error {
+	tx, err := am.db.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	deleteSQL := fmt.Sprintf(`DELETE FROM kline_daily_%s WHERE id = ?`, stockCode)
+	stmt, err := tx.Prepare(deleteSQL)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, id := range ids {
+		if _, err := stmt.Exec(id); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+// 自动归档管理器
+func (am *ArchiveManager) AutoArchive(stockCode string) error {
+	cutoffDate := time.Now().AddDate(0, 0, -am.db.retentionDays)
+	cutoffYear := cutoffDate.Year()
+	currentYear := time.Now().Year()
+
+	// 归档所有超过保留期的完整年份
+	for year := 2020; year < cutoffYear; year++ {
+		// 检查是否已经归档
+		archivePath := filepath.Join(am.db.archiveDir, fmt.Sprintf("%s_%d_archive.db", stockCode, year))
+		if _, err := os.Stat(archivePath); err == nil {
+			fmt.Printf("股票 %s 年份 %d 已归档，跳过\n", stockCode, year)
+			continue
+		}
+
+		if err := am.ArchiveDataByYear(stockCode, year); err != nil {
+			return fmt.Errorf("归档年份 %d 失败: %v", year, err)
+		}
+	}
+
+	return nil
+}
+
+// 从归档中查询历史数据
+func (am *ArchiveManager) QueryArchivedData(stockCode string, startDate, endDate time.Time) ([]*CompactKlineDaily, error) {
+	var allResults []*CompactKlineDaily
+
+	startYear := startDate.Year()
+	endYear := endDate.Year()
+
+	for year := startYear; year <= endYear; year++ {
+		archivePath := filepath.Join(am.db.archiveDir, fmt.Sprintf("%s_%d_archive.db", stockCode, year))
+
+		// 检查归档文件是否存在
+		if _, err := os.Stat(archivePath); os.IsNotExist(err) {
+			continue
+		}
+
+		archiveDB, err := sql.Open("sqlite3", archivePath)
+		if err != nil {
+			continue
+		}
+
+		query := `SELECT id, trade_date, open_price, high_price, low_price, close_price,
+            volume, amount, created_ts, updated_ts
+            FROM kline_daily_archive 
+            WHERE trade_date BETWEEN ? AND ?
+            ORDER BY trade_date`
+
+		rows, err := archiveDB.Query(query, startDate, endDate)
+		if err != nil {
+			archiveDB.Close()
+			continue
+		}
+
+		for rows.Next() {
+			record := &CompactKlineDaily{}
+			var createdTS, updatedTS int64
+
+			err := rows.Scan(&record.ID, &record.TradeDate, &record.OpenPrice,
+				&record.HighPrice, &record.LowPrice, &record.ClosePrice,
+				&record.Volume, &record.Amount, &createdTS, &updatedTS)
+			if err != nil {
+				continue
+			}
+
+			record.CreatedTS = CompactTimestamp(createdTS)
+			record.UpdatedTS = CompactTimestamp(updatedTS)
+			allResults = append(allResults, record)
+		}
+
+		rows.Close()
+		archiveDB.Close()
+	}
+
+	return allResults, nil
+}
+
+// 数据库维护和优化
+func (s *StockDBCompact) Maintenance() error {
+	// 1. 分析表
+	if _, err := s.db.Exec("ANALYZE"); err != nil {
+		fmt.Printf("ANALYZE失败: %v\n", err)
+	}
+
+	// 2. 清理WAL文件
+	if _, err := s.db.Exec("PRAGMA wal_checkpoint(TRUNCATE)"); err != nil {
+		fmt.Printf("WAL checkpoint失败: %v\n", err)
+	}
+
+	// 3. 压缩数据库
+	if _, err := s.db.Exec("VACUUM"); err != nil {
+		fmt.Printf("VACUUM失败: %v\n", err)
+	}
+
+	return nil
+}
+
+// 获取存储空间统计
+func (s *StockDBCompact) GetStorageStats(stockCode string) (map[string]interface{}, error) {
+	stats := make(map[string]interface{})
+
+	// 主表统计
+	query := fmt.Sprintf(`SELECT 
+        COUNT(*) as record_count,
+        MIN(trade_date) as min_date,
+        MAX(trade_date) as max_date,
+        SUM(length(trade_date) + 
+            CASE WHEN open_price IS NULL THEN 0 ELSE 4 END +
+            CASE WHEN high_price IS NULL THEN 0 ELSE 4 END +
+            CASE WHEN low_price IS NULL THEN 0 ELSE 4 END +
+            CASE WHEN close_price IS NULL THEN 0 ELSE 4 END +
+            CASE WHEN volume IS NULL THEN 0 ELSE 8 END +
+            CASE WHEN amount IS NULL THEN 0 ELSE 8 END +
+            4 + 4) as estimated_size_bytes
+        FROM kline_daily_%s`, stockCode)
+
+	var count int64
+	var minDate, maxDate sql.NullString
+	var estimatedSize int64
+
+	err := s.db.QueryRow(query).Scan(&count, &minDate, &maxDate, &estimatedSize)
+	if err != nil {
+		return nil, err
+	}
+
+	stats["main_table_records"] = count
+	if minDate.Valid {
+		stats["min_date"] = minDate.String
+	}
+	if maxDate.Valid {
+		stats["max_date"] = maxDate.String
+	}
+	stats["estimated_size_mb"] = float64(estimatedSize) / 1024 / 1024
+
+	// 归档文件统计
+	archivePattern := filepath.Join(s.archiveDir, stockCode+"_*_archive.db")
+	archiveFiles, err := filepath.Glob(archivePattern)
+	if err == nil {
+		var totalArchiveSize int64
+		for _, file := range archiveFiles {
+			if info, err := os.Stat(file); err == nil {
+				totalArchiveSize += info.Size()
+			}
+		}
+		stats["archive_files_count"] = len(archiveFiles)
+		stats["archive_size_mb"] = float64(totalArchiveSize) / 1024 / 1024
+	}
+
+	return stats, nil
+}
+
+// 使用示例
+func main() {
+	// 创建紧凑存储的数据库
+	db, err := NewStockDBCompact("compact_stock.db", "./archives", 365) // 保留1年数据
+	if err != nil {
+		panic(err)
+	}
+	defer db.db.Close()
+
+	stockCode := "000001"
+
+	// 创建表
+	if err := db.CreateCompactTables(stockCode); err != nil {
+		panic(err)
+	}
+
+	// 插入测试数据
+	testData := &CompactKlineDaily{
+		TradeDate:  time.Now().Truncate(24 * time.Hour),
+		OpenPrice:  PriceToInt(10.50),
+		HighPrice:  PriceToInt(11.20),
+		LowPrice:   PriceToInt(10.30),
+		ClosePrice: PriceToInt(11.00),
+		Volume:     1000000,
+		Amount:     AmountToInt(10800000.00),
+	}
+
+	if err := db.InsertCompactDaily(stockCode, testData); err != nil {
+		fmt.Printf("插入数据失败: %v\n", err)
+	}
+
+	// 创建归档管理器
+	archiveManager := NewArchiveManager(db)
+
+	// 执行自动归档
+	if err := archiveManager.AutoArchive(stockCode); err != nil {
+		fmt.Printf("自动归档失败: %v\n", err)
+	}
+
+	// 获取存储统计
+	stats, err := db.GetStorageStats(stockCode)
+	if err != nil {
+		fmt.Printf("获取统计失败: %v\n", err)
+	} else {
+		fmt.Printf("存储统计: %+v\n", stats)
+	}
+
+	// 执行维护
+	if err := db.Maintenance(); err != nil {
+		fmt.Printf("数据库维护失败: %v\n", err)
+	}
+}

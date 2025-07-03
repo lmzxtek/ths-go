@@ -8,6 +8,38 @@ import (
 	"time"
 )
 
+func Records2Timestamp(records []map[string]any, istimestamp bool, tskey string) []map[string]any {
+	// res := make([]map[string]any, len(records))
+	var res []map[string]any
+	for i := range records {
+		// dd1 := make(map[string]any, len(records[i]))
+		dd1 := make(map[string]any)
+		for k, v := range records[i] {
+			if k == tskey {
+				key := "timestamp"
+				tstr := v.(string)
+				tt, err := ParseTimestamp(tstr)
+				if err != nil {
+					continue
+				}
+				if istimestamp {
+					dd1[key] = tt.UnixMilli()
+				} else {
+					if len(tstr) <= 10 {
+						dd1[key] = tt.Format("2006-01-02")
+					} else {
+						dd1[key] = tt.Format("2006-01-02 15:04:05")
+					}
+				}
+			} else {
+				dd1[k] = v
+			}
+		}
+		res = append(res, dd1)
+	}
+	return res
+}
+
 func ConvertEob2Timestamp(records []map[string]any, istimestamp bool) []map[string]any {
 	// res := make([]map[string]any, len(records))
 	var res []map[string]any
@@ -115,6 +147,50 @@ func ConvertRecords2DictTSInt(records []map[string]any) map[string]map[int64]any
 	return res
 }
 
+// 把原始数据转换为字典数据
+func Records2DictInt(records []map[string]any, key string) map[int64]any {
+	res := make(map[int64]any)
+	for i := range records {
+		timestamp := records[i][key].(int64)
+		dd1 := make(map[string]any)
+		for k, v := range records[i] {
+			if k == key {
+				continue
+			}
+			dd1[k] = v
+		}
+		res[timestamp] = dd1
+	}
+	return res
+}
+
+// 把原始数据转换为字典数据
+func Records2DictStr(records []map[string]any, key string) map[string]any {
+	res := make(map[string]any)
+	for i := range records {
+		timestamp := ""
+		switch v := records[i][key].(type) {
+		case string:
+			timestamp = v
+		case int64:
+			timestamp = fmt.Sprintf("%d", v)
+		default:
+			fmt.Println("unknown type:", v)
+		}
+		dd1 := make(map[string]any)
+		for k, v := range records[i] {
+			if k == key {
+				continue
+			}
+			dd1[k] = v
+		}
+		if timestamp != "" {
+			res[timestamp] = dd1
+		}
+	}
+	return res
+}
+
 // 返回字符串的最后n个字符
 func LastNChars(s string, n int) string {
 	runes := []rune(s)
@@ -190,6 +266,54 @@ func GetDayEnd(t time.Time) time.Time {
 	// endOfDay := nextDayStart.Add(-time.Nanosecond)
 
 	return endOfDay
+}
+
+func GetMonthStartAndEnd(t time.Time) (time.Time, time.Time) {
+	// 获取给定时间戳的年、月、时区
+	year, month, _ := t.Date()
+	location := t.Location()
+
+	// 当月开始时间：将时、分、秒、纳秒设置为0
+	startOfMonth := time.Date(year, month, 1, 0, 0, 0, 0, location)
+	// 当月结束时间：将时、分、秒、纳秒设置为23:59:59.999999999
+	endOfMonth := startOfMonth.AddDate(0, 1, 0).Add(-time.Nanosecond)
+
+	return startOfMonth, endOfMonth
+}
+
+func GetMonthStart(t time.Time) time.Time {
+	// 获取给定时间戳的年、月、时区
+	year, month, _ := t.Date()
+	location := t.Location()
+
+	// 当月开始时间：将时、分、秒、纳秒设置为0
+	startOfMonth := time.Date(year, month, 1, 0, 0, 0, 0, location)
+
+	return startOfMonth
+}
+
+func GetMonthEnd(t time.Time) time.Time {
+	// 获取给定时间戳的年、月、时区
+	year, month, _ := t.Date()
+	location := t.Location()
+
+	// 当月结束时间：将时、分、秒、纳秒设置为23:59:59.999999999
+	endOfMonth := time.Date(year, month, 1, 0, 0, 0, 0, location).AddDate(0, 1, 0).Add(-time.Nanosecond)
+	// endOfMonth := startOfMonth.AddDate(0, 1, 0).Add(-time.Nanosecond)
+
+	return endOfMonth
+}
+
+// 获取给定时间上一个月的最后一个日期
+func GetEndOfLastMonth(t time.Time) time.Time {
+	// 获取给定时间戳的年、月、时区
+	year, month, _ := t.Date()
+	location := t.Location()
+
+	// 当月结束时间：将时、分、秒、纳秒设置为23:59:59.999999999
+	endOfMonth := time.Date(year, month, 1, 0, 0, 0, 0, location).Add(-time.Nanosecond)
+
+	return endOfMonth
 }
 
 // 辅助函数：从字符串解析日期

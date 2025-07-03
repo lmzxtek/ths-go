@@ -1,0 +1,596 @@
+package main
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"time"
+
+	_ "github.com/mattn/go-sqlite3"
+)
+
+// K线数据结构体
+type KLineData struct {
+	Symbol    string  `json:"symbol"`    // 股票代码
+	Timestamp int64   `json:"timestamp"` // 时间戳
+	Open      float64 `json:"open"`      // 开盘价
+	High      float64 `json:"high"`      // 最高价
+	Low       float64 `json:"low"`       // 最低价
+	Close     float64 `json:"close"`     // 收盘价
+	Volume    int64   `json:"volume"`    // 成交量
+	Amount    float64 `json:"amount"`    // 成交额
+	Period    string  `json:"period"`    // 周期 (1min, 5min, 15min, 30min, 1hour, 1day)
+}
+
+// 分时数据结构体
+type TickData struct {
+	Symbol    string  `json:"symbol"`     // 股票代码
+	Timestamp int64   `json:"timestamp"`  // 时间戳
+	Price     float64 `json:"price"`      // 当前价格
+	Volume    int64   `json:"volume"`     // 当前成交量
+	Amount    float64 `json:"amount"`     // 当前成交额
+	BuyPrice  float64 `json:"buy_price"`  // 买一价
+	SellPrice float64 `json:"sell_price"` // 卖一价
+	BuyVol    int64   `json:"buy_vol"`    // 买一量
+	SellVol   int64   `json:"sell_vol"`   // 卖一量
+}
+
+// API响应结构体
+type KLineAPIResponse struct {
+	Success bool        `json:"success"`
+	Data    []KLineData `json:"data"`
+	Message string      `json:"message"`
+}
+
+type TickAPIResponse struct {
+	Success bool       `json:"success"`
+	Data    []TickData `json:"data"`
+	Message string     `json:"message"`
+}
+
+func main() {
+	// 初始化数据库
+	db, err := initDatabase()
+	if err != nil {
+		log.Fatal("初始化数据库失败:", err)
+	}
+	defer db.Close()
+
+	// 演示保存K线数据
+	fmt.Println("=== 保存K线数据 ===")
+	klineData := generateMockKLineData()
+	err = saveKLineData(db, klineData)
+	if err != nil {
+		log.Fatal("保存K线数据失败:", err)
+	}
+	fmt.Printf("成功保存 %d 条K线数据\n", len(klineData))
+
+	// 演示保存分时数据
+	fmt.Println("\n=== 保存分时数据 ===")
+	tickData := generateMockTickData()
+	err = saveTickData(db, tickData)
+	if err != nil {
+		log.Fatal("保存分时数据失败:", err)
+	}
+	fmt.Printf("成功保存 %d 条分时数据\n", len(tickData))
+
+	// 查询并显示数据
+	fmt.Println("\n=== 查询K线数据 ===")
+	err = displayKLineData(db, "AAPL", "1min", 10)
+	if err != nil {
+		log.Fatal("查询K线数据失败:", err)
+	}
+
+	fmt.Println("\n=== 查询分时数据 ===")
+	err = displayTickData(db, "AAPL", 10)
+	if err != nil {
+		log.Fatal("查询分时数据失败:", err)
+	}
+
+	// 演示数据统计
+	fmt.Println("\n=== 数据统计 ===")
+	err = showDataStatistics(db)
+	if err != nil {
+		log.Fatal("查询统计数据失败:", err)
+	}
+}
+
+// 初始化SQLite数据库
+func initDatabase() (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", "./kline_data.db")
+	if err != nil {
+		return nil, err
+	}
+
+	// 创建K线数据表
+	createKLineTableSQL := `
+	CREATE TABLE IF NOT EXISTS kline_data (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		symbol TEXT NOT NULL,
+		timestamp INTEGER NOT NULL,
+		datetime TEXT NOT NULL,
+		open_price REAL NOT NULL,
+		high_price REAL NOT NULL,
+		low_price REAL NOT NULL,
+		close_price REAL NOT NULL,
+		volume INTEGER NOT NULL,
+		amount REAL NOT NULL,
+		period TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(symbol, timestamp, period)
+	);
+	`
+
+	// 创建分时数据表
+	createTickTableSQL := `
+	CREATE TABLE IF NOT EXISTS tick_data (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		symbol TEXT NOT NULL,
+		timestamp INTEGER NOT NULL,
+		datetime TEXT NOT NULL,
+		price REAL NOT NULL,
+		volume INTEGER NOT NULL,
+		amount REAL NOT NULL,
+		buy_price REAL,
+		sell_price REAL,
+		buy_volume INTEGER,
+		sell_volume INTEGER,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(symbol, timestamp)
+	);
+	`
+
+	// 创建索引
+	createIndexSQL := `
+	CREATE INDEX IF NOT EXISTS idx_kline_symbol_period ON kline_data(symbol, period, timestamp);
+	CREATE INDEX IF NOT EXISTS idx_kline_timestamp ON kline_data(timestamp);
+	CREATE INDEX IF NOT EXISTS idx_tick_symbol ON tick_data(symbol, timestamp);
+	CREATE INDEX IF NOT EXISTS idx_tick_timestamp ON tick_data(timestamp);
+	`
+
+	// 执行建表语句
+	if _, err = db.Exec(createKLineTableSQL); err != nil {
+		return nil, fmt.Errorf("创建K线表失败: %v", err)
+	}
+
+	if _, err = db.Exec(createTickTableSQL); err != nil {
+		return nil, fmt.Errorf("创建分时表失败: %v", err)
+	}
+
+	if _, err = db.Exec(createIndexSQL); err != nil {
+		return nil, fmt.Errorf("创建索引失败: %v", err)
+	}
+
+	return db, nil
+}
+
+// 从API获取K线数据
+func fetchKLineData(url string) ([]KLineData, error) {
+	client := &http.Client{Timeout: 30 * time.Second}
+
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP请求失败: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API返回错误状态码: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("读取响应体失败: %v", err)
+	}
+
+	var apiResponse KLineAPIResponse
+	err = json.Unmarshal(body, &apiResponse)
+	if err != nil {
+		return nil, fmt.Errorf("解析JSON失败: %v", err)
+	}
+
+	if !apiResponse.Success {
+		return nil, fmt.Errorf("API响应错误: %s", apiResponse.Message)
+	}
+
+	return apiResponse.Data, nil
+}
+
+// 生成模拟K线数据
+func generateMockKLineData() []KLineData {
+	baseTime := time.Now().Add(-2 * time.Hour).Unix()
+	basePrice := 182.50
+
+	var klineData []KLineData
+
+	// 生成1分钟K线数据（过去2小时）
+	for i := 0; i < 120; i++ {
+		timestamp := baseTime + int64(i*60) // 每分钟一条
+
+		// 模拟价格波动
+		priceChange := (float64(i%10) - 5) * 0.1
+		open := basePrice + priceChange
+		high := open + float64(i%3)*0.05
+		low := open - float64(i%2)*0.03
+		close := open + (float64(i%7)-3)*0.02
+
+		if high < open || high < close {
+			high = max(open, close) + 0.01
+		}
+		if low > open || low > close {
+			low = min(open, close) - 0.01
+		}
+
+		volume := int64(10000 + (i%50)*1000)
+		amount := float64(volume) * (open + close) / 2
+
+		klineData = append(klineData, KLineData{
+			Symbol:    "AAPL",
+			Timestamp: timestamp,
+			Open:      roundFloat(open, 2),
+			High:      roundFloat(high, 2),
+			Low:       roundFloat(low, 2),
+			Close:     roundFloat(close, 2),
+			Volume:    volume,
+			Amount:    roundFloat(amount, 2),
+			Period:    "1min",
+		})
+
+		basePrice = close // 下一根K线基于当前收盘价
+	}
+
+	return klineData
+}
+
+// 生成模拟分时数据
+func generateMockTickData() []TickData {
+	baseTime := time.Now().Add(-30 * time.Minute).Unix()
+	basePrice := 182.50
+
+	var tickData []TickData
+
+	// 生成分时数据（过去30分钟，每3秒一条）
+	for i := 0; i < 600; i++ {
+		timestamp := baseTime + int64(i*3) // 每3秒一条
+
+		// 模拟价格微小波动
+		priceChange := (float64(i%20) - 10) * 0.001
+		price := basePrice + priceChange
+
+		volume := int64(100 + (i%10)*50)
+		amount := float64(volume) * price
+
+		tickData = append(tickData, TickData{
+			Symbol:    "AAPL",
+			Timestamp: timestamp,
+			Price:     roundFloat(price, 3),
+			Volume:    volume,
+			Amount:    roundFloat(amount, 2),
+			BuyPrice:  roundFloat(price-0.01, 3),
+			SellPrice: roundFloat(price+0.01, 3),
+			BuyVol:    volume + int64(i%5)*10,
+			SellVol:   volume + int64(i%3)*15,
+		})
+
+		basePrice = price
+	}
+
+	return tickData
+}
+
+// 保存K线数据到数据库
+func saveKLineData(db *sql.DB, klines []KLineData) error {
+	insertSQL := `
+	INSERT OR REPLACE INTO kline_data 
+	(symbol, timestamp, datetime, open_price, high_price, low_price, close_price, volume, amount, period)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+
+	stmt, err := db.Prepare(insertSQL)
+	if err != nil {
+		return fmt.Errorf("准备SQL语句失败: %v", err)
+	}
+	defer stmt.Close()
+
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("开始事务失败: %v", err)
+	}
+
+	for _, kline := range klines {
+		datetime := time.Unix(kline.Timestamp, 0).Format("2006-01-02 15:04:05")
+
+		_, err = tx.Stmt(stmt).Exec(
+			kline.Symbol,
+			kline.Timestamp,
+			datetime,
+			kline.Open,
+			kline.High,
+			kline.Low,
+			kline.Close,
+			kline.Volume,
+			kline.Amount,
+			kline.Period,
+		)
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("插入K线数据失败: %v", err)
+		}
+	}
+
+	return tx.Commit()
+}
+
+// 保存分时数据到数据库
+func saveTickData(db *sql.DB, ticks []TickData) error {
+	insertSQL := `
+	INSERT OR REPLACE INTO tick_data 
+	(symbol, timestamp, datetime, price, volume, amount, buy_price, sell_price, buy_volume, sell_volume)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+
+	stmt, err := db.Prepare(insertSQL)
+	if err != nil {
+		return fmt.Errorf("准备SQL语句失败: %v", err)
+	}
+	defer stmt.Close()
+
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("开始事务失败: %v", err)
+	}
+
+	for _, tick := range ticks {
+		datetime := time.Unix(tick.Timestamp, 0).Format("2006-01-02 15:04:05")
+
+		_, err = tx.Stmt(stmt).Exec(
+			tick.Symbol,
+			tick.Timestamp,
+			datetime,
+			tick.Price,
+			tick.Volume,
+			tick.Amount,
+			tick.BuyPrice,
+			tick.SellPrice,
+			tick.BuyVol,
+			tick.SellVol,
+		)
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("插入分时数据失败: %v", err)
+		}
+	}
+
+	return tx.Commit()
+}
+
+// 查询并显示K线数据
+func displayKLineData(db *sql.DB, symbol, period string, limit int) error {
+	query := `
+	SELECT symbol, datetime, open_price, high_price, low_price, close_price, volume, amount
+	FROM kline_data
+	WHERE symbol = ? AND period = ?
+	ORDER BY timestamp DESC
+	LIMIT ?
+	`
+
+	rows, err := db.Query(query, symbol, period, limit)
+	if err != nil {
+		return fmt.Errorf("查询K线数据失败: %v", err)
+	}
+	defer rows.Close()
+
+	fmt.Printf("%s %s K线数据:\n", symbol, period)
+	fmt.Println("时间\t\t\t开盘\t最高\t最低\t收盘\t成交量\t\t成交额")
+	fmt.Println("----\t\t\t----\t----\t----\t----\t------\t\t------")
+
+	for rows.Next() {
+		var symbol, datetime string
+		var open, high, low, close, amount float64
+		var volume int64
+
+		err := rows.Scan(&symbol, &datetime, &open, &high, &low, &close, &volume, &amount)
+		if err != nil {
+			return fmt.Errorf("扫描K线数据失败: %v", err)
+		}
+
+		fmt.Printf("%s\t%.2f\t%.2f\t%.2f\t%.2f\t%d\t\t%.2f\n",
+			datetime, open, high, low, close, volume, amount)
+	}
+
+	return nil
+}
+
+// 查询并显示分时数据
+func displayTickData(db *sql.DB, symbol string, limit int) error {
+	query := `
+	SELECT symbol, datetime, price, volume, amount, buy_price, sell_price, buy_volume, sell_volume
+	FROM tick_data
+	WHERE symbol = ?
+	ORDER BY timestamp DESC
+	LIMIT ?
+	`
+
+	rows, err := db.Query(query, symbol, limit)
+	if err != nil {
+		return fmt.Errorf("查询分时数据失败: %v", err)
+	}
+	defer rows.Close()
+
+	fmt.Printf("%s 分时数据:\n", symbol)
+	fmt.Println("时间\t\t\t价格\t成交量\t买一价\t卖一价\t买一量\t卖一量")
+	fmt.Println("----\t\t\t----\t------\t------\t------\t------\t------")
+
+	for rows.Next() {
+		var symbol, datetime string
+		var price, amount, buyPrice, sellPrice float64
+		var volume, buyVol, sellVol int64
+
+		err := rows.Scan(&symbol, &datetime, &price, &volume, &amount, &buyPrice, &sellPrice, &buyVol, &sellVol)
+		if err != nil {
+			return fmt.Errorf("扫描分时数据失败: %v", err)
+		}
+
+		fmt.Printf("%s\t%.3f\t%d\t%.3f\t%.3f\t%d\t%d\n",
+			datetime, price, volume, buyPrice, sellPrice, buyVol, sellVol)
+	}
+
+	return nil
+}
+
+// 显示数据统计信息
+func showDataStatistics(db *sql.DB) error {
+	// K线数据统计
+	klineQuery := `
+	SELECT 
+		symbol, 
+		period, 
+		COUNT(*) as count,
+		MIN(datetime) as earliest,
+		MAX(datetime) as latest
+	FROM kline_data 
+	GROUP BY symbol, period
+	`
+
+	rows, err := db.Query(klineQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	fmt.Println("K线数据统计:")
+	fmt.Println("代码\t周期\t数量\t最早时间\t\t最新时间")
+	fmt.Println("----\t----\t----\t--------\t\t--------")
+
+	for rows.Next() {
+		var symbol, period, earliest, latest string
+		var count int
+
+		err := rows.Scan(&symbol, &period, &count, &earliest, &latest)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("%s\t%s\t%d\t%s\t%s\n", symbol, period, count, earliest, latest)
+	}
+
+	// 分时数据统计
+	tickQuery := `
+	SELECT 
+		symbol, 
+		COUNT(*) as count,
+		MIN(datetime) as earliest,
+		MAX(datetime) as latest
+	FROM tick_data 
+	GROUP BY symbol
+	`
+
+	rows2, err := db.Query(tickQuery)
+	if err != nil {
+		return err
+	}
+	defer rows2.Close()
+
+	fmt.Println("\n分时数据统计:")
+	fmt.Println("代码\t数量\t最早时间\t\t最新时间")
+	fmt.Println("----\t----\t--------\t\t--------")
+
+	for rows2.Next() {
+		var symbol, earliest, latest string
+		var count int
+
+		err := rows2.Scan(&symbol, &count, &earliest, &latest)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("%s\t%d\t%s\t%s\n", symbol, count, earliest, latest)
+	}
+
+	return nil
+}
+
+// 工具函数：浮点数四舍五入
+func roundFloat(val float64, precision uint) float64 {
+	ratio := float64(1)
+	for i := uint(0); i < precision; i++ {
+		ratio *= 10
+	}
+	return float64(int(val*ratio+0.5)) / ratio
+}
+
+// 工具函数：求最大值
+func max(a, b float64) float64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// 工具函数：求最小值
+func min(a, b float64) float64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// 获取指定时间范围内的K线数据
+func getKLineDataByTimeRange(db *sql.DB, symbol, period string, startTime, endTime int64) ([]KLineData, error) {
+	query := `
+	SELECT symbol, timestamp, open_price, high_price, low_price, close_price, volume, amount, period
+	FROM kline_data
+	WHERE symbol = ? AND period = ? AND timestamp >= ? AND timestamp <= ?
+	ORDER BY timestamp ASC
+	`
+
+	rows, err := db.Query(query, symbol, period, startTime, endTime)
+	if err != nil {
+		return nil, fmt.Errorf("查询K线数据失败: %v", err)
+	}
+	defer rows.Close()
+
+	var klines []KLineData
+	for rows.Next() {
+		var kline KLineData
+		err := rows.Scan(
+			&kline.Symbol,
+			&kline.Timestamp,
+			&kline.Open,
+			&kline.High,
+			&kline.Low,
+			&kline.Close,
+			&kline.Volume,
+			&kline.Amount,
+			&kline.Period,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("扫描K线数据失败: %v", err)
+		}
+		klines = append(klines, kline)
+	}
+
+	return klines, nil
+}
+
+// 计算技术指标示例：简单移动平均线(SMA)
+func calculateSMA(prices []float64, period int) []float64 {
+	if len(prices) < period {
+		return nil
+	}
+
+	sma := make([]float64, len(prices)-period+1)
+
+	for i := period - 1; i < len(prices); i++ {
+		sum := 0.0
+		for j := i - period + 1; j <= i; j++ {
+			sum += prices[j]
+		}
+		sma[i-period+1] = sum / float64(period)
+	}
+
+	return sma
+}

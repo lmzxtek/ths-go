@@ -3019,26 +3019,27 @@ func GetGM1m(gmcsv string, gmapi string,
 		return nil, fmt.Errorf("开始日期大于结束日期: sdate=%s, edate=%s", sday, eday)
 	}
 
-	isclip := true
+	isclip := true // 是否根据日期范围裁剪数据
+
+	// 确定上个月的结束日期
+	mStartDate := GetEndOfLastMonth(time.Now()).Format("2006-01-02")
+	// fmt.Printf("上个月结束日期: %s\n", mStartDate)
 
 	// 应该先判断一下开始日期是否是超过当月月初，如果超过则不获取CSV数据：
 	// 只有开始日期小于当月月初时才获取CSV数据，以提高接口数据获取速度
-	dcsv, _ := GetCSV1m(gmcsv, symbol, sday, eday, istimestamp, isclip, timeoutSeconds)
-	if len(dcsv) > 0 {
-		ddd = append(ddd, dcsv...)
-		// fmt.Printf("获取CSV数据成功: %d条: %s - %s\n", len(dcsv), sday, eday)
-		// etime, _ := time.Parse("2006-01-02", dcsv[len(dcsv)-1]["timestamp"].(string))
-		tsStr := dcsv[len(dcsv)-1]["timestamp"]
-		etime, _ := ParseTimestamp(tsStr)
-		// var etime time.Time
-		// if istimestamp {
-		// 	etime = ConvertString2Time(tsStr.(string))
-		// } else {
-		// 	etime = time.UnixMilli(tsStr.(int64))
-		// }
-		etime = etime.AddDate(0, 0, 1)
-		sday = etime.Format("2006-01-02") // 开始时间设置为下一天
-		// fmt.Printf(" 下个开始日期: %s \n", sday)
+	if sday < mStartDate {
+		eeday := min(eday, mStartDate)
+		dcsv, _ := GetCSV1m(gmcsv, symbol, sday, eeday, istimestamp, isclip, timeoutSeconds)
+		if len(dcsv) > 0 {
+			ddd = append(ddd, dcsv...)
+
+			tsStr := dcsv[len(dcsv)-1]["timestamp"]
+			etime, _ := ParseTimestamp(tsStr)
+
+			etime = etime.AddDate(0, 0, 1)
+			sday = etime.Format("2006-01-02") // 开始时间设置为下一天
+			// fmt.Printf(" 下个开始日期: %s \n", sday)
+		}
 	}
 
 	if sday > eday {
@@ -3046,10 +3047,6 @@ func GetGM1m(gmcsv string, gmapi string,
 	}
 
 	dapi, _ := GetKbarsHis(gmapi, symbol, "1m", sday, eday, istimestamp, timeoutSeconds)
-
-	// jsonData, _ := json.Marshal(dapi[:5])
-	// fmt.Println(string(jsonData))
-
 	for i := range dapi {
 		// 去掉API数据中的symbol字段
 		dd1 := make(map[string]any, 6)
@@ -3062,10 +3059,91 @@ func GetGM1m(gmcsv string, gmapi string,
 		dd1["volume"] = dapi[i]["volume"]
 		ddd = append(ddd, dd1)
 	}
-	// ddd = append(ddd, dapi...)
-	// if dapi != nil {
-	// 	// fmt.Printf("获取API数据成功: %d条: %s - %s\n", len(dapi), sday, eday)
-	// 	// 处理一下数据结构，使得CSV数据和API数据合并
+
+	return ddd, nil
+}
+
+// 按日期范围获取日频行情数据
+func GetGM1d(gmcsv string, gmapi string,
+	symbol string, sdate string, edate string, istimestamp bool, include bool,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	var ddd []map[string]any
+
+	sday := sdate
+	eday := edate
+	if !include {
+		etime, _ := time.Parse("2006-01-02", eday)
+		etime = etime.AddDate(0, 0, -1)
+		eday = etime.Format("2006-01-02")
+	}
+	if sday > eday {
+		return nil, fmt.Errorf("开始日期大于结束日期: sdate=%s, edate=%s", sday, eday)
+	}
+
+	dapi, _ := GetKbarsHis(gmapi, symbol, "1d", sday, eday, istimestamp, timeoutSeconds)
+	for i := range dapi {
+		// 去掉API数据中的symbol字段
+		dd1 := make(map[string]any, 6)
+
+		dd1["timestamp"] = dapi[i]["timestamp"]
+		dd1["open"] = dapi[i]["open"]
+		dd1["high"] = dapi[i]["high"]
+		dd1["low"] = dapi[i]["low"]
+		dd1["close"] = dapi[i]["close"]
+		dd1["volume"] = dapi[i]["volume"]
+		ddd = append(ddd, dd1)
+	}
+
+	return ddd, nil
+}
+
+// 按日期范围获取财务衍生行情数据
+func GetGMpe(gmcsv string, gmapi string,
+	symbol string, sdate string, edate string, fields string, istimestamp bool, include bool,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	// var ddd []map[string]any
+
+	sday := sdate
+	eday := edate
+	if !include {
+		etime, _ := time.Parse("2006-01-02", eday)
+		etime = etime.AddDate(0, 0, -1)
+		eday = etime.Format("2006-01-02")
+	}
+	if sday > eday {
+		return nil, fmt.Errorf("开始日期大于结束日期: sdate=%s, edate=%s", sday, eday)
+	}
+
+	rsp, _ := GetDailyValuation(gmapi, symbol, sday, eday, fields, timeoutSeconds)
+	ddd := Records2Timestamp(rsp, istimestamp, "trade_date")
+	// for i := range rsp {
+	// 	// 去掉API数据中的symbol字段
+	// 	dd1 := make(map[string]any)
+	// 	for k, v := range rsp[i] {
+	// 		if k == "trade_date" {
+	// 			key := "timestamp"
+	// 			tstr := v.(string)
+	// 			tt, err := ParseTimestamp(tstr)
+	// 			if err != nil {
+	// 				continue
+	// 			}
+	// 			if istimestamp {
+	// 				dd1[key] = tt.UnixMilli()
+	// 			} else {
+	// 				if len(tstr) <= 10 {
+	// 					dd1[key] = tt.Format("2006-01-02")
+	// 				} else {
+	// 					dd1[key] = tt.Format("2006-01-02 15:04:05")
+	// 				}
+	// 			}
+	// 		} else {
+	// 			dd1[k] = v
+	// 		}
+	// 	}
+
+	// 	ddd = append(ddd, dd1)
 	// }
 
 	return ddd, nil

@@ -260,11 +260,12 @@ func BuildHTML2(cfg HTMLConfig) string {
 	// 格式化当前日期为 "YYYY-MM-DD" 格式
 	today := now.Format("2006-01-02")
 	strCurYear := now.Format("2006")
-	strCurMonth := now.Format("01")
+	// strCurMonth := now.Format("01")
 	// strDay := now.Format("02")
 	// strDate := strYear + "-" + strMonth + "-" + strDay
 
 	strPreMonth := now.AddDate(0, -1, 0).Format("2006-01-02")
+	strPreMonth2 := now.AddDate(0, -1, 0).Format("01")
 	strPreDay := now.AddDate(0, 0, -1).Format("2006-01-02")
 	preYear := now.AddDate(-1, 0, 0)
 	strYear1 := preYear.Format("2006")
@@ -273,7 +274,7 @@ func BuildHTML2(cfg HTMLConfig) string {
 	syms := "SHSE.601088,SZSE.300917"
 	sym := cfg.Symbol
 	idx := cfg.Sididx
-	//===================================================================
+	//=============================================================
 
 	//=============================================================
 	builder := strings.Builder{}
@@ -352,6 +353,15 @@ func BuildHTML2(cfg HTMLConfig) string {
 	builder.WriteString(strCalendar)
 
 	//=============================================================
+	kb1d1 := "gm1d?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
+	kb1d2 := "gm1d?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true"
+	kb1d3 := "gm1d?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&isdic=true"
+	kb1d4 := "gm1d?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true" + "&isdic=true"
+	kb1d5 := "gmpe?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
+	kb1d6 := "gmpe?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&fields=pe_ttm"
+	kb1d7 := "gmpe?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true" + "&isdic=true" + "&fields=pe_ttm"
+	kb1d8 := "gmpe?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true" + "&isdic=true"
+
 	kbGM1 := "gm1m?symbol=" + sym
 	kbGM2 := "gm1m?symbol=" + sym + "&time_stamp=true"
 	kbGM3 := "gm1m?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
@@ -364,7 +374,7 @@ func BuildHTML2(cfg HTMLConfig) string {
 
 	kbCSV1 := "csvyear?symbol=" + sym + "&year=" + strCurYear
 	kbCSV2 := "csvyear?symbol=" + sym + "&year=" + strCurYear + "&time_stamp=true"
-	kbCSV3 := "csvmonth?symbol=" + sym + "&year=" + strCurYear + "&month=" + strCurMonth
+	kbCSV3 := "csvmonth?symbol=" + sym + "&year=" + strCurYear + "&month=" + strPreMonth2
 	kbCSV4 := "csv1m?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + strPreMonth
 	kbCSV5 := "csvtag?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
 	kbCSV6 := "csvtag?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&tag=pe"
@@ -380,10 +390,26 @@ func BuildHTML2(cfg HTMLConfig) string {
 	kbAPI8 := "kbarsn?symbol=" + sym + "&count=30" + "&edate=" + today + "&tag=1d"
 	kbAPI9 := "kbarsn?symbol=" + sym + "&count=30" + "&edate=" + today + "&tag=1d" + `&time_stamp=true`
 
+	kbDic1 := "kbdict?symbols=" + syms + "&tag=1d" + "&sdate=" + strPreMonth + "&edate=" + today
+	kbDic2 := "kbdict?symbols=" + syms + "&tag=1d" + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true"
+	kbDic3 := "kbdictts?symbols=" + syms + "&tag=1d" + "&sdate=" + strPreMonth + "&edate=" + today
+	kbDic4 := "kbdictts?symbols=" + syms + "&tag=1d" + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true"
+
 	strKBars := fmt.Sprintf(`
     <h3>历史行情</h3>
     <ul>
-		<li>综合接口(1m)  <br>
+		<li>日频行情(1d)  <br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<br>
+		<li>分时行情(1m)  <br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
@@ -414,10 +440,23 @@ func BuildHTML2(cfg HTMLConfig) string {
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 		</li>
     </ul>
 `,
+		url, kb1d1, url, kb1d1,
+		url, kb1d2, url, kb1d2,
+		url, kb1d3, url, kb1d3,
+		url, kb1d4, url, kb1d4,
+		url, kb1d5, url, kb1d5,
+		url, kb1d6, url, kb1d6,
+		url, kb1d7, url, kb1d7,
+		url, kb1d8, url, kb1d8,
+
 		url, kbGM1, url, kbGM1,
 		url, kbGM2, url, kbGM2,
 		url, kbGM3, url, kbGM3,
@@ -445,6 +484,11 @@ func BuildHTML2(cfg HTMLConfig) string {
 		url, kbAPI7, url, kbAPI7,
 		url, kbAPI8, url, kbAPI8,
 		url, kbAPI9, url, kbAPI9,
+
+		url, kbDic1, url, kbDic1,
+		url, kbDic2, url, kbDic2,
+		url, kbDic3, url, kbDic3,
+		url, kbDic4, url, kbDic4,
 	)
 	builder.WriteString(strKBars)
 
@@ -2264,4 +2308,113 @@ func RouteGM1m(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteGM1d(c *gin.Context) {
+	symbol := c.DefaultQuery("symbol", "")
+	if symbol == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须参数"))
+		return
+	}
+
+	timeoutSeconds := 30
+	now := time.Now()
+	today := now.Format("2006-01-02")
+	prday := now.AddDate(0, 0, -1)
+	yesterday := prday.Format("2006-01-02")
+
+	// tag := c.DefaultQuery("tag", "1m")
+
+	timestamp := c.DefaultQuery("time_stamp", "false")
+	istimestamp := false
+	if timestamp == "true" {
+		istimestamp = true
+	}
+	include := c.DefaultQuery("include", "true")
+	isinclude := true
+	if include == "false" {
+		isinclude = false
+	}
+	isdic := c.DefaultQuery("isdic", "false")
+	bdict := false
+	if isdic == "true" {
+		bdict = true
+	}
+	cday := yesterday
+	if isinclude && gm.IsAOpen() {
+		cday = today
+	}
+	sdate := c.DefaultQuery("sdate", cday)
+	edate := c.DefaultQuery("edate", cday)
+
+	rawData, err := gm.GetGM1d(gmcsv, gmapi, symbol, sdate, edate, istimestamp, isinclude, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetGM1d)": err.Error()})
+		return
+	}
+	if bdict {
+		c.JSON(http.StatusOK, gm.Records2DictStr(rawData, "timestamp"))
+		// if istimestamp {
+		// 	c.JSON(http.StatusOK, gm.Records2DictInt(rawData, "timestamp"))
+		// } else {
+		// 	c.JSON(http.StatusOK, gm.Records2DictStr(rawData, "timestamp"))
+		// }
+	} else {
+		c.JSON(http.StatusOK, rawData)
+	}
+}
+
+func RouteGMpe(c *gin.Context) {
+	symbol := c.DefaultQuery("symbol", "")
+	if symbol == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须参数"))
+		return
+	}
+
+	timeoutSeconds := 30
+	now := time.Now()
+	today := now.Format("2006-01-02")
+	prday := now.AddDate(0, 0, -1)
+	yesterday := prday.Format("2006-01-02")
+
+	// tag := c.DefaultQuery("tag", "1m")
+
+	timestamp := c.DefaultQuery("time_stamp", "false")
+	istimestamp := false
+	if timestamp == "true" {
+		istimestamp = true
+	}
+	include := c.DefaultQuery("include", "true")
+	isinclude := true
+	if include == "false" {
+		isinclude = false
+	}
+	isdic := c.DefaultQuery("isdic", "false")
+	bdict := false
+	if isdic == "true" {
+		bdict = true
+	}
+	cday := yesterday
+	if isinclude && gm.IsAOpen() {
+		cday = today
+	}
+	sdate := c.DefaultQuery("sdate", cday)
+	edate := c.DefaultQuery("edate", cday)
+	fields := c.DefaultQuery("fields", "")
+
+	rawData, err := gm.GetGMpe(gmcsv, gmapi, symbol, sdate, edate, fields, istimestamp, isinclude, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetGMpe)": err.Error()})
+		return
+	}
+	if bdict {
+		c.JSON(http.StatusOK, gm.Records2DictStr(rawData, "timestamp"))
+		// if istimestamp {
+		// 	c.JSON(http.StatusOK, gm.Records2DictInt(rawData, "timestamp"))
+		// } else {
+		// 	c.JSON(http.StatusOK, gm.Records2DictStr(rawData, "timestamp"))
+		// }
+	} else {
+		c.JSON(http.StatusOK, rawData)
+	}
 }

@@ -67,6 +67,8 @@ func main() {
 	r.GET("/test3", srv.RouteTest3)
 
 	//====================================================
+	r.GET("/gmpe", srv.RouteGMpe)
+	r.GET("/gm1d", srv.RouteGM1d)
 	r.GET("/gm1m", srv.RouteGM1m)
 	r.GET("/api1m", srv.RouteGMApi1m)
 
@@ -82,7 +84,6 @@ func main() {
 	r.GET("/kbarsn", srv.RouteKbarsN)
 
 	r.GET("/current", srv.RouteCurrent)
-
 	//====================================================
 	r.GET("/prevn", srv.RouteDatesPrevN)
 	r.GET("/nextn", srv.RouteDatesNextN)

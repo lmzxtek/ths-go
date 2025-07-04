@@ -121,20 +121,20 @@ func generateDynamicDataFrame(startYear, startMonth, numMonths, initialOpen int)
 func dfToJSONRecords(df dataframe.DataFrame) ([]byte, error) {
 	records := make([]map[string]interface{}, 0, df.Nrow()) // Pre-allocate capacity
 
-	colNames := df.Names() // Get all column names
+	// colNames := df.Names() // Get all column names
 
 	for i := 0; i < df.Nrow(); i++ { // Iterate over each row
 		row := make(map[string]interface{}) // Create a map to store data for the current row
-		for _, colName := range colNames {  // Iterate over each column in the current row
-			s := df.Col(colName)        // Get the Series for the current column
-			val, err := s.Elem(i).Val() // Get the value for the current row in this column
-			if err != nil {
-				// Handle error, e.g., if value is NaN or cannot be converted to a specific type
-				row[colName] = nil // Or skip, or set to a default value
-			} else {
-				row[colName] = val
-			}
-		}
+		// for _, colName := range colNames {  // Iterate over each column in the current row
+		// 	s := df.Col(colName)        // Get the Series for the current column
+		// 	val, err := s.Elem(i).Val() // Get the value for the current row in this column
+		// 	if err != nil {
+		// 		// Handle error, e.g., if value is NaN or cannot be converted to a specific type
+		// 		row[colName] = nil // Or skip, or set to a default value
+		// 	} else {
+		// 		row[colName] = val
+		// 	}
+		// }
 		records = append(records, row) // Add the current row (map) to the records slice
 	}
 
@@ -234,11 +234,11 @@ func main_df() {
 		if specificDayDFNotFound.Nrow() > 0 {
 			fmt.Printf("Found data: Period: %s, Open: %d, High: %d, Low: %d, Last: %d, Volume: %d\n",
 				specificDayDFNotFound.Col("Period").Elem(0).String(),
-				specificDayDFNotFound.Col("Open").Elem(0).Int(),
-				specificDayDFNotFound.Col("High").Elem(0).Int(),
-				specificDayDFNotFound.Col("Low").Elem(0).Int(),
-				specificDayDFNotFound.Col("Last").Elem(0).Int(),
-				specificDayDFNotFound.Col("Volume").Elem(0).Int(),
+				// specificDayDFNotFound.Col("Open").Elem(0).Int(),
+				// specificDayDFNotFound.Col("High").Elem(0).Int(),
+				// specificDayDFNotFound.Col("Low").Elem(0).Int(),
+				// specificDayDFNotFound.Col("Last").Elem(0).Int(),
+				// specificDayDFNotFound.Col("Volume").Elem(0).Int(),
 			)
 		} else {
 			fmt.Printf("No data found for date %s.\n", targetPeriodNotFound)
@@ -276,21 +276,21 @@ func main_df() {
 
 		// 1. Concatenate df1 and df2
 		// dataframe.Concat vertically concatenates two or more DataFrames
-		combinedDF := dataframe.Concat([]dataframe.DataFrame{df1, df2})
+		// combinedDF := dataframe.Concat([]dataframe.DataFrame{df1, df2})
 		fmt.Println("\nConcatenated DataFrame (may contain duplicate data):")
-		fmt.Println(combinedDF)
+		// fmt.Println(combinedDF)
 
 		// 2. Deduplicate, keeping the last occurrence (i.e., from df2 if overlapped)
 		// DropDuplicates method removes duplicate rows based on specified columns (here, "Period")
 		// By setting the 'keep' argument to series.Last, we ensure that if there are duplicates,
 		// the last occurrence (which would be from df2 in the concatenated order) is retained.
-		deduplicatedDF := combinedDF.DropDuplicates("Period", series.Last)
+		// deduplicatedDF := combinedDF.DropDuplicates("Period", series.Last)
 		fmt.Println("\nDeduplicated DataFrame (deduplicated by 'Period' column, keeping last occurrence):")
-		fmt.Println(deduplicatedDF)
+		// fmt.Println(deduplicatedDF)
 
 		// Verify row counts after deduplication
-		fmt.Printf("\ndf1 rows: %d, df2 rows: %d, Combined rows: %d, Deduplicated rows: %d\n",
-			df1.Nrow(), df2.Nrow(), combinedDF.Nrow(), deduplicatedDF.Nrow())
+		// fmt.Printf("\ndf1 rows: %d, df2 rows: %d, Combined rows: %d, Deduplicated rows: %d\n",
+		// df1.Nrow(), df2.Nrow(), combinedDF.Nrow(), deduplicatedDF.Nrow())
 
 		fmt.Println("--- Concatenating and Deduplicating DataFrames Example Complete ---")
 

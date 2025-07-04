@@ -79,179 +79,6 @@ type HTMLConfig struct {
 	Sididx    string
 }
 
-// type Config struct {
-// 	Host      string `json:"host"`
-// 	Port      int    `json:"port"`
-// 	Debug     bool   `json:"debug"`
-// 	FldData   string `json:"fld_data"`
-// 	ServerTag string `json:"servertag"`
-// }
-// var cfg Config
-// var baseDir string
-
-// 生成HTML的构造函数
-func BuildHTML(cfg HTMLConfig) string {
-	url := cfg.HostURL
-	// 获取当前时间
-	now := time.Now()
-	// 格式化当前日期为 "YYYY-MM-DD" 格式
-	today := now.Format("2006-01-02")
-	strCurYear := now.Format("2006")
-	// strMonth := now.Format("01")
-	// strDay := now.Format("02")
-	// strDate := strYear + "-" + strMonth + "-" + strDay
-
-	strPreMonth := now.AddDate(0, -1, 0).Format("2006-01-02")
-	preYear := now.AddDate(-1, 0, 0)
-	strYear1 := preYear.Format("2006")
-	strPreYear := preYear.Format("2006-01-02")
-
-	syms := "SHSE.601088,SZSE.300917"
-	sym := cfg.Symbol
-	idx := cfg.Sididx
-
-	//===================================================================
-	strDatePrevN1 := "prevn?date=" + today + "&count=10"
-	strDatePrevN2 := "prevn?date=" + today + "&count=10&include=false"
-	strDatePrevN3 := "prevn?date=" + today + "&count=365"
-	strDateNextN1 := "nextn?date=" + today + "&count=10"
-	strDateNextN2 := "nextn?date=" + today + "&count=10&include=false"
-
-	// strTradeCalendar1 := "calendar"
-	strTradeCalendar1 := "calendar"
-	strTradeCalendar2 := "calendar?eyear=" + strYear1
-	strTradeCalendar3 := "calendar?syear=" + strYear1 + "&eyear=" + strCurYear
-	strTradeCalendar4 := "calendar?syear=" + "2005"
-
-	kbGM1 := "gm1m?symbol=" + sym
-	kbGM2 := "gm1m?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
-	kbGM3 := "gm1m?symbol=" + sym + "&sdate=" + strPreYear + "&edate=" + today
-
-	strMarketInfo1 := "market_info?sec=stock"
-	strMarketInfo2 := "market_info?sec=index"
-	strMarketInfo3 := "market_info?sec=fund"
-
-	strSymbolInfo1 := "symbols_info?sec=stock"
-	strSymbolInfo2 := "symbols_info?sec=stock&symbols=" + sym
-	strSymbolInfo3 := "symbols_info?sec=stock&symbols=" + syms
-	strSymbolInfo4 := "symbols_info?sec=index"
-	strSymbolInfo5 := "symbols_info?sec=index&symbols=" + idx
-
-	strHistoryInfo1 := "history_info?symbol=" + sym
-	strHistoryInfo2 := "history_info?symbol=" + sym + "&sdate=" + strPreYear
-	strHistoryInfo3 := "history_info?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
-
-	//===================================================================
-	return fmt.Sprintf(`<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>GM-API [go] -> [ %s ] </title></head>
-<body>
-    <h1>GM-API (go语言版本)</h1>
-    <h2>服务器 : %s </h2>
-    <h3>当前日期 : %s </h3>
-    <ul>
-        <li>说明: <a href="http://%s/usage" target="_blank">http://%s/usage</a></li>
-        <li>测试1: <a href="http://%s/test" target="_blank">http://%s/test</a></li>
-        <li>测试2: <a href="http://%s/test2" target="_blank">http://%s/test2</a></li>
-        <li>测试3: <a href="http://%s/test3" target="_blank">http://%s/test3</a></li>
-    </ul>
-
-    <h3>交易日历</h3>
-    <ul>
-        <li>前N: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
-        <li>前N: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
-        <li>前N: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
-        <li>后N: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
-        <li>后N: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
-        <li>日历(当年): <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
-        <li>日历(去年): <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
-        <li>日历(两年): <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
-        <li>日历(2005~): <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
-    </ul>
-
-    <h3>历史行情</h3>
-    <ul>
-		<li>综合接口 : <br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-		</li>
-		<li>API接口 : <br>
-		</li>
-		<li>CSV接口 : <br>
-		</li>
-    </ul>
-
-    <h3>基本资料</h3>
-    <ul>
-		<li>市场信息 : <br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-		</li>
-		<li>个股信息 : <br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-		</li>
-		<li>个股历史信息 : <br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-		</li>
-    </ul>
-
-    <h3>财务数据</h3>
-    <ul>
-        <li>vv: <a href="http://%s/%s" target="_blank">http://%s/%s</a></li>
-    </ul>
-
-</body>
-</html>`,
-		cfg.ServerTag, cfg.ServerTag, today,
-
-		url, url,
-		url, url,
-		url, url,
-		url, url,
-
-		url, strDatePrevN1, url, strDatePrevN1,
-		url, strDatePrevN2, url, strDatePrevN2,
-		url, strDatePrevN3, url, strDatePrevN3,
-		url, strDateNextN1, url, strDateNextN1,
-		url, strDateNextN2, url, strDateNextN2,
-
-		url, strTradeCalendar1, url, strTradeCalendar1,
-		url, strTradeCalendar2, url, strTradeCalendar2,
-		url, strTradeCalendar3, url, strTradeCalendar3,
-		url, strTradeCalendar4, url, strTradeCalendar4,
-
-		url, kbGM1, url, kbGM1,
-		url, kbGM2, url, kbGM2,
-		url, kbGM3, url, kbGM3,
-
-		url, strMarketInfo1, url, strMarketInfo1,
-		url, strMarketInfo2, url, strMarketInfo2,
-		url, strMarketInfo3, url, strMarketInfo3,
-
-		url, strSymbolInfo1, url, strSymbolInfo1,
-		url, strSymbolInfo2, url, strSymbolInfo2,
-		url, strSymbolInfo3, url, strSymbolInfo3,
-		url, strSymbolInfo4, url, strSymbolInfo4,
-		url, strSymbolInfo5, url, strSymbolInfo5,
-
-		url, strHistoryInfo1, url, strHistoryInfo1,
-		url, strHistoryInfo2, url, strHistoryInfo2,
-		url, strHistoryInfo3, url, strHistoryInfo3,
-
-		url, strSymbolInfo1, url, strSymbolInfo1,
-		// url, fpathMonth1, url, fpathMonth1,
-		// url, fpathYear2, url, fpathYear2,
-	)
-}
-
 // 生成HTML的构造函数
 func BuildHTML2(cfg HTMLConfig) string {
 	url := cfg.HostURL
@@ -372,33 +199,10 @@ func BuildHTML2(cfg HTMLConfig) string {
 	kbGM8 := "api1m?symbol=" + sym + "&sdate=" + strPreDay + "&edate=" + today
 	kbGM9 := "api1m?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
 
-	kbCSV1 := "csvyear?symbol=" + sym + "&year=" + strCurYear
-	kbCSV2 := "csvyear?symbol=" + sym + "&year=" + strCurYear + "&time_stamp=true"
-	kbCSV3 := "csvmonth?symbol=" + sym + "&year=" + strCurYear + "&month=" + strPreMonth2
-	kbCSV4 := "csv1m?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + strPreMonth
-	kbCSV5 := "csvtag?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
-	kbCSV6 := "csvtag?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&tag=pe"
-	kbCSV7 := "csvtag?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&tag=vv" + "&clip=false"
-
-	kbAPI1 := "kbars?symbols=" + sym
-	kbAPI2 := "kbars?symbols=" + syms
-	kbAPI3 := "kbars?symbols=" + syms + "&time_stamp=true"
-	kbAPI4 := "kbars?symbols=" + syms + "&sdate=" + strPreMonth + "&edate=" + today
-	kbAPI5 := "kbars?symbols=" + syms + "&sdate=" + strPreYear + "&edate=" + today + "&tag=1d"
-	kbAPI6 := "kbars?symbols=" + syms + "&sdate=" + strPreYear + "&edate=" + today + "&tag=1d" + "&time_stamp=true"
-	kbAPI7 := "kbarsn?symbol=" + sym + "&count=90" + "&tag=1m"
-	kbAPI8 := "kbarsn?symbol=" + sym + "&count=30" + "&edate=" + today + "&tag=1d"
-	kbAPI9 := "kbarsn?symbol=" + sym + "&count=30" + "&edate=" + today + "&tag=1d" + `&time_stamp=true`
-
-	kbDic1 := "kbdict?symbols=" + syms + "&tag=1d" + "&sdate=" + strPreMonth + "&edate=" + today
-	kbDic2 := "kbdict?symbols=" + syms + "&tag=1d" + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true"
-	kbDic3 := "kbdictts?symbols=" + syms + "&tag=1d" + "&sdate=" + strPreMonth + "&edate=" + today
-	kbDic4 := "kbdictts?symbols=" + syms + "&tag=1d" + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true"
-
-	strKBars := fmt.Sprintf(`
+	strGMs := fmt.Sprintf(`
     <h3>历史行情</h3>
     <ul>
-		<li>日频行情(1d)  <br>
+		<li>日频数据(1d)  <br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
@@ -409,35 +213,9 @@ func BuildHTML2(cfg HTMLConfig) string {
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 		</li>
 		<br>
-		<li>分时行情(1m)  <br>
+		<li>分时数据(1m)  <br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-		</li>
-		<br>
-		<li>CSV接口  <br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-		</li>
-		<br>
-		<li>API接口  <br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
-			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
@@ -466,7 +244,63 @@ func BuildHTML2(cfg HTMLConfig) string {
 		url, kbGM7, url, kbGM7,
 		url, kbGM8, url, kbGM8,
 		url, kbGM9, url, kbGM9,
+	)
+	builder.WriteString(strGMs)
 
+	//=============================================================
+	kbCSV1 := "csvyear?symbol=" + sym + "&year=" + strCurYear
+	kbCSV2 := "csvyear?symbol=" + sym + "&year=" + strCurYear + "&time_stamp=true"
+	kbCSV3 := "csvmonth?symbol=" + sym + "&year=" + strCurYear + "&month=" + strPreMonth2
+	kbCSV4 := "csv1m?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + strPreMonth
+	kbCSV5 := "csvtag?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
+	kbCSV6 := "csvtag?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&tag=pe"
+	kbCSV7 := "csvtag?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&tag=vv" + "&clip=false"
+
+	kbAPI1 := "kbars?symbols=" + sym
+	kbAPI2 := "kbars?symbols=" + syms
+	kbAPI3 := "kbars?symbols=" + syms + "&time_stamp=true"
+	kbAPI4 := "kbars?symbols=" + syms + "&sdate=" + strPreMonth + "&edate=" + today
+	kbAPI5 := "kbars?symbols=" + syms + "&sdate=" + strPreYear + "&edate=" + today + "&tag=1d"
+	kbAPI6 := "kbars?symbols=" + syms + "&sdate=" + strPreYear + "&edate=" + today + "&tag=1d" + "&time_stamp=true"
+	kbAPI7 := "kbarsn?symbol=" + sym + "&count=90" + "&tag=1m"
+	kbAPI8 := "kbarsn?symbol=" + sym + "&count=30" + "&edate=" + today + "&tag=1d"
+	kbAPI9 := "kbarsn?symbol=" + sym + "&count=30" + "&edate=" + today + "&tag=1d" + `&time_stamp=true`
+
+	kbDic1 := "kbdict?symbols=" + syms + "&tag=1d" + "&sdate=" + strPreMonth + "&edate=" + today
+	kbDic2 := "kbdict?symbols=" + syms + "&tag=1d" + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true"
+	kbDic3 := "kbdictts?symbols=" + syms + "&tag=1d" + "&sdate=" + strPreMonth + "&edate=" + today
+	kbDic4 := "kbdictts?symbols=" + syms + "&tag=1d" + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true"
+
+	strKBars := fmt.Sprintf(`
+    <h3>行情数据</h3>
+    <ul>
+		<li>CSV接口  <br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+		<br>
+		<li>API接口  <br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+		</li>
+    </ul>
+`,
 		url, kbCSV1, url, kbCSV1,
 		url, kbCSV2, url, kbCSV2,
 		url, kbCSV3, url, kbCSV3,

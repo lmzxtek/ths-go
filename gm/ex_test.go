@@ -14,6 +14,68 @@ import (
 var gmURL = "http://localhost:5000"
 var gmCSV = "http://localhost:5002"
 
+func TestKBDataMinute(t *testing.T) {
+	fmt.Println("\n >>> Start read dataframe... ")
+
+	symbol := "SHSE.601088"
+	// year := 2025
+	istime := true
+	isclip := true
+	istime = false
+	// isclip = false
+
+	sdate := "2025-07-01"
+	edate := "2025-07-04"
+	// sdate = "2025-07-04"
+	edate = "2025-07-04"
+
+	rsp, err := GetGM1m(gmCSV, gmURL, symbol, sdate, edate, istime, isclip, 10)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+
+	// fmt.Println("=" + strings.Repeat("=", 50))
+	// jsonData, _ := json.Marshal(rsp[:5])
+	// fmt.Println(string(jsonData))
+	// fmt.Println("=" + strings.Repeat("=", 50))
+	// jsonData, _ = json.Marshal(rsp[len(rsp)-5:])
+	// fmt.Println(string(jsonData))
+	// fmt.Println("=" + strings.Repeat("=", 50))
+
+	var kbList OHLCVList
+	kbList.ReadMapList(rsp)
+	kbList.Head(5)
+	kbList.Tail(5)
+	// kbList.Sort(true)
+	// kbList.Head(5)
+	// kbList.Tail(5)
+
+	// kb := kbList.ToDaily()
+	// kb.Print(true)
+
+	// kl := kbList.ToDaily2()
+	// kl.Head(5)
+
+	// v1 := kbList.GetV123List()
+	// v1.Head(5)
+
+	// v5 := kbList.To5m(5)
+	// v5.Head(5)
+	// v5.Tail(5)
+
+	// v3 := kbList.To5m(30)
+	// v3.Head(8)
+
+	// v6 := kbList.To5m(60)
+	// v6.Tail(5)
+
+	// cbj := kbList.GetCbjList("10:00:00")
+	// cbj.Tail(5)
+
+	vvl := kbList.ToVVList()
+	vvl.Tail(5, true, true, true)
+}
+
 // TestReadCSV is a test function to read CSV file and print the dataframe
 func TestCSV(t *testing.T) {
 	jsonStr := `{

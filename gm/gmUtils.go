@@ -50,16 +50,11 @@ func ConvertEob2Timestamp(records []map[string]any, istimestamp bool) []map[stri
 			if k == "timestamp" || k == "eob" {
 				key := "timestamp"
 				tstr := v.(string)
-				// tstr = strings.TrimSpace(tstr)
-				// tstr = strings.TrimSuffix(tstr, "+08:00")
-				// tstr = strings.Replace(tstr, "T", " ", 1)
 				tt, err := ParseTimestamp(tstr)
 				if err != nil {
 					continue
 				}
 				if istimestamp {
-					// t, _ := time.Parse("2006-01-02 15:04:05", tstr)
-					// dd1[key] = t.UnixMilli()
 					dd1[key] = tt.UnixMilli()
 				} else {
 					if len(tstr) <= 10 {
@@ -167,26 +162,28 @@ func Records2DictInt(records []map[string]any, key string) map[int64]any {
 // 把原始数据转换为字典数据
 func Records2DictStr(records []map[string]any, key string) map[string]any {
 	res := make(map[string]any)
-	for i := range records {
-		timestamp := ""
-		switch v := records[i][key].(type) {
+	for _, record := range records {
+		tsKey := ""
+		switch v := record[key].(type) {
 		case string:
-			timestamp = v
+			tsKey = v
 		case int64:
-			timestamp = fmt.Sprintf("%d", v)
+			tsKey = fmt.Sprintf("%d", v)
 		default:
 			fmt.Println("unknown type:", v)
 		}
+		if tsKey == "" {
+			continue
+		}
+
 		dd1 := make(map[string]any)
-		for k, v := range records[i] {
+		for k, v := range record {
 			if k == key {
 				continue
 			}
 			dd1[k] = v
 		}
-		if timestamp != "" {
-			res[timestamp] = dd1
-		}
+		res[tsKey] = dd1
 	}
 	return res
 }
@@ -326,12 +323,13 @@ func ParseDate(dateStr string) (*time.Time, error) {
 }
 
 // ParseTimestamp 解析各种格式的时间戳
+// 注：默认字符串的时区为"Asia/Shanghai"
 func ParseTimestamp(ts any) (time.Time, error) {
 	switch v := ts.(type) {
 	case string:
 		// 尝试不同的字符串时间格式
 		formats := []string{
-			time.RFC3339,          // "2006-01-02T15:04:05Z07:00"
+			time.RFC3339,          // "2006-01-02T15:04:05Z08:00"
 			"2006-01-02 15:04:05", // "2006-01-02 15:04:05"
 			"2006-01-02T15:04:05", // "2006-01-02T15:04:05"
 			"2006-01-02",          // "2006-01-02"
@@ -340,9 +338,17 @@ func ParseTimestamp(ts any) (time.Time, error) {
 		}
 
 		v = strings.TrimSpace(v)
+		nlen := len("2006-01-02 15:04:05")
 		for _, format := range formats {
-			if t, err := time.Parse(format, v); err == nil {
-				return t, nil
+			if len(v) > nlen {
+				if t, err := time.Parse(format, v); err == nil {
+					return t, nil
+				}
+			} else {
+				tz, _ := time.LoadLocation("Asia/Shanghai")
+				if t, err := time.ParseInLocation(format, v, tz); err == nil {
+					return t, nil
+				}
 			}
 		}
 
@@ -493,10 +499,10 @@ func MillisToFormattedStringInLocation(millis int64, layout string, locationName
 }
 
 // GetTimestampInfo 获取时间戳的详细信息
-func GetTimestampInfo(millis int64) map[string]interface{} {
+func GetTimestampInfo(millis int64) map[string]any {
 	t := MillisToTime(millis)
 
-	info := map[string]interface{}{
+	info := map[string]any{
 		"timestamp_millis":  millis,
 		"timestamp_seconds": millis / 1000,
 		"time_utc":          t.UTC().Format("2006-01-02 15:04:05"),
@@ -532,7 +538,6 @@ func IsChineseStockMarketOpen() bool {
 
 	// 获取当前中国时间
 	now := time.Now().In(chinaLocation)
-
 	return IsChineseStockMarketOpenAt(now)
 }
 

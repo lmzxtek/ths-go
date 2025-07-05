@@ -1,10 +1,15 @@
 package gm
 
-import "time"
+import (
+	"slices"
+	"strings"
+	"time"
+)
 
 type VVData struct {
 	// TS time.Time `json:"timestamp"`
-	TS string `json:"timestamp"`
+	TS int64 `json:"timestamp"`
+	// TS string `json:"timestamp"`
 
 	Open   float64 `json:"open"`
 	High   float64 `json:"high"`
@@ -34,39 +39,117 @@ type VVData struct {
 type VVList []VVData
 
 // 计算单日成本价+成交量中值
-func (k *VVData) Init(ohlcv OHLCVList) {
-	ohv := ohlcv.ToOHLCVData(true)
-	k.TS = ohv.Timestamp.Format("2006-01-02")
-	k.Open = ohv.Open
-	k.High = ohv.High
-	k.Low = ohv.Low
-	k.Close = ohv.Close
-	k.Volume = ohv.Volume
+func (k *VVData) Init(ohlcv OHLCVList, isOHLC bool, isV123 bool, isCbj bool) {
+	if isOHLC {
+		ohv := ohlcv.ToOHLCVData(true)
+		k.TS = ohv.Timestamp.UnixMilli()
+		// k.TS = ohv.Timestamp.Format("2006-01-02")
+		k.Open = ohv.Open
+		k.High = ohv.High
+		k.Low = ohv.Low
+		k.Close = ohv.Close
+		k.Volume = ohv.Volume
 
-	v123 := ohlcv.GetV123Data()
-	k.V931 = v123.V931
-	k.V932 = v123.V932
-	k.V935 = v123.V935
-	k.V940 = v123.V940
-	k.V150 = v123.V150
+		k.Hjj = (4*k.Close + 2*k.Open + k.High + k.Low) / 8
+		k.Pvj = ohlcv.GetPvj(4, 2, 1, 1)
+	}
 
-	k.Hjj = 4*k.Close + 2*k.Open + k.High + k.Low/8
-	k.Pvj = ohlcv.GetPvj(4, 2, 1, 1)
+	if isV123 {
+		v123 := ohlcv.ToV123Data()
+		k.V931 = v123.V931
+		k.V932 = v123.V932
+		k.V935 = v123.V935
+		k.V940 = v123.V940
+		k.V150 = v123.V150
+	}
 
-	cbj := ohlcv.GetCbjData("10:00:00")
-	k.Cbj = cbj.Cbj
-	k.Cb1 = cbj.Cb1
-	k.Cb2 = cbj.Cb2
+	if isCbj {
+		cbj := ohlcv.ToCbjData("10:00:00")
+		k.Cbj = cbj.Cbj
+		k.Cb1 = cbj.Cb1
+		k.Cb2 = cbj.Cb2
 
-	k.Vmed = cbj.Vmed
-	k.Nup = cbj.Nup
-	k.Ndown = cbj.Ndown
+		k.Vmed = cbj.Vmed
+		k.Nup = cbj.Nup
+		k.Ndown = cbj.Ndown
+	}
+}
+
+func CheckIndicators(indicators string) (isOHLC bool, isV123 bool, isCbj bool) {
+	isOHLC = false
+	isV123 = false
+	isCbj = false
+	if indicators == "" {
+		return true, true, true
+	}
+	indicatorList := strings.Split(indicators, ",")
+	indicatorOHLC := []string{"hjj", "pvj"}
+	indicatorV123 := []string{"v931", "v932", "v935", "v940", "v150"}
+	indicatorCbj := []string{"vmed", "cbj", "cb1", "cb2", "nup", "ndown"}
+	for _, ind := range indicatorList {
+		if slices.Contains(indicatorOHLC, ind) {
+			isOHLC = true
+		}
+		if slices.Contains(indicatorV123, ind) {
+			isV123 = true
+		}
+		if slices.Contains(indicatorCbj, ind) {
+			isCbj = true
+		}
+	}
+
+	return isOHLC, isV123, isCbj
+}
+
+// 计算单日成本价+成交量中值
+func (k *VVData) ToRecord(isOHLC, isV123, isCbj, istimestamp bool) map[string]any {
+	rec := make(map[string]any)
+	// isOHLC, isV123, isCbj := CheckIndicators(indicators)
+	if isOHLC || isV123 || isCbj {
+		if !istimestamp {
+			tz := time.FixedZone("CST", 8*3600)
+			// ts, _ := time.ParseInLocation("2006-01-02", k.TS, tz)
+			ts := MillisToTime(k.TS).In(tz)
+			rec["timestamp"] = ts.Format("2006-01-02")
+		} else {
+			rec["timestamp"] = k.TS
+		}
+	}
+	if isOHLC {
+		rec["open"] = k.Open
+		rec["high"] = k.High
+		rec["low"] = k.Low
+		rec["close"] = k.Close
+		rec["volume"] = k.Volume
+		rec["hjj"] = k.Hjj
+		rec["pvj"] = k.Pvj
+	}
+
+	if isV123 {
+		rec["v931"] = k.V931
+		rec["v932"] = k.V932
+		rec["v935"] = k.V935
+		rec["v940"] = k.V940
+		rec["v150"] = k.V150
+	}
+
+	if isCbj {
+		rec["vmed"] = k.Vmed
+		rec["cbj"] = k.Cbj
+		rec["cb1"] = k.Cb1
+		rec["cb2"] = k.Cb2
+		rec["nup"] = k.Nup
+		rec["ndown"] = k.Ndown
+	}
+
+	return rec
 }
 
 func (k *VVData) ToOHLCVData() (dd OHLCVData) {
 	// ohv := ohlcv.ToOHLCVData(true)
 	tz := time.FixedZone("CST", 8*3600)
-	ts, _ := time.ParseInLocation("2006-01-02", k.TS, tz)
+	// ts, _ := time.ParseInLocation("2006-01-02", k.TS, tz)
+	ts := MillisToTime(k.TS).In(tz)
 
 	dd.Timestamp = ts
 	dd.Open = k.Open
@@ -81,7 +164,8 @@ func (k *VVData) ToOHLCVData() (dd OHLCVData) {
 func (k *VVData) ToV123Data() (dd V123Data) {
 	// ohv := ohlcv.ToOHLCVData(true)
 	tz := time.FixedZone("CST", 8*3600)
-	ts, _ := time.ParseInLocation("2006-01-02", k.TS, tz)
+	ts := MillisToTime(k.TS).In(tz)
+	// ts, _ := time.ParseInLocation("2006-01-02", k.TS, tz)
 
 	dd.TS = ts
 	dd.V931 = k.V931
@@ -96,7 +180,8 @@ func (k *VVData) ToV123Data() (dd V123Data) {
 func (k *VVData) ToCbjData() (dd CbjData) {
 	// ohv := ohlcv.ToOHLCVData(true)
 	tz := time.FixedZone("CST", 8*3600)
-	ts, _ := time.ParseInLocation("2006-01-02", k.TS, tz)
+	ts := MillisToTime(k.TS).In(tz)
+	// ts, _ := time.ParseInLocation("2006-01-02", k.TS, tz)
 
 	dd.TS = ts
 	dd.Vmed = k.Vmed
@@ -130,6 +215,15 @@ func (k *VVList) ToOHLCVList() (ll OHLCVList) {
 	return ll
 }
 
+// 将数据转换为map[string]any切片
+func (k *VVList) ToRecords(isOHLC, isV123, isCbj, istimestamp bool) []map[string]any {
+	var dd []map[string]any
+	for _, kk := range *k {
+		dd = append(dd, kk.ToRecord(isOHLC, isV123, isCbj, istimestamp))
+	}
+	return dd
+}
+
 func (k *VVList) Head(n int, isohlcv bool, iscb bool, isv123 bool) {
 	if isohlcv {
 		ohv := (*k).ToOHLCVList()
@@ -148,7 +242,7 @@ func (k *VVList) Head(n int, isohlcv bool, iscb bool, isv123 bool) {
 
 }
 
-func (k *VVList) Tail(n int, isohlcv bool, iscb bool, isv123 bool) {
+func (k *VVList) Tail(n int, isohlcv bool, isv123 bool, iscb bool) {
 	if isohlcv {
 		ohv := (*k).ToOHLCVList()
 		ohv.Tail(n)

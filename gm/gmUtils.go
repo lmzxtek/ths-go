@@ -2,11 +2,27 @@ package gm
 
 import (
 	"fmt"
+	"math"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 )
+
+// 计算百分比中值的函数
+func CalcMedianPct(data []float64, pct float64) float64 {
+	n := len(data)
+	if n == 0 {
+		return 0
+	}
+	// sort.Float64s(data)
+
+	ratio := pct / 100.0
+	n1 := min(n, int(math.Ceil(float64(n)*ratio)))
+	n2 := max(0, int(math.Floor(float64(n)*ratio)))
+
+	return (data[n1-1] + data[n2-1]) / 2
+}
 
 func Records2Timestamp(records []map[string]any, istimestamp bool, tskey string) []map[string]any {
 	// res := make([]map[string]any, len(records))

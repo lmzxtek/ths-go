@@ -61,7 +61,7 @@ func (k *OHLCVList) Add(kbar OHLCVData) {
 }
 
 // 从map列表中读取KBar列表
-func (k *OHLCVList) ReadMapList(kbList []map[string]any) {
+func (k *OHLCVList) FromMapList(kbList []map[string]any) {
 	for _, data := range kbList {
 		kbar := OHLCVData{}
 		kbar.ReadMap(data)
@@ -288,7 +288,7 @@ func (k *OHLCVList) GetPvj(rC, rO, rH, rL float64) float64 {
 // 计算黄金价 Hjj: rC, rO, rH, rL 为权重
 //
 //	计算方法：(4*收盘价 + 2*开盘价 + 最高价 + 最低价) / 8
-func (k *OHLCVList) GetHjjList(rC, rO, rH, rL float64) []float64 {
+func (k *OHLCVList) ToHjjList(rC, rO, rH, rL float64) []float64 {
 	var hjjList []float64
 	for _, kb := range *k {
 		hjj := kb.GetHjj(rC, rO, rH, rL)
@@ -298,7 +298,7 @@ func (k *OHLCVList) GetHjjList(rC, rO, rH, rL float64) []float64 {
 }
 
 // 提取单日特定成交量：v931, v932, v935, v940, v150
-func (k *OHLCVList) GetV123Data() V123Data {
+func (k *OHLCVList) ToV123Data() V123Data {
 	// var kbar KBarDataMinute
 	nlen := len(*k)
 	if nlen == 0 {
@@ -346,7 +346,7 @@ func (k *OHLCVList) GetV123Data() V123Data {
 }
 
 // 提取日频成交量：v931, v932, v935, v940, v150
-func (k *OHLCVList) GetV123List() V123List {
+func (k *OHLCVList) ToV123List() V123List {
 	var kbList V123List
 
 	nlen := len(*k)
@@ -371,30 +371,15 @@ func (k *OHLCVList) GetV123List() V123List {
 	}
 
 	for _, v := range kDic {
-		kb := v.GetV123Data()
+		kb := v.ToV123Data()
 		kbList = append(kbList, kb)
 	}
 	kbList.Sort(false)
 	return kbList
 }
 
-// 计算百分比中值的函数
-func CalcMedianPct(data []float64, pct float64) float64 {
-	n := len(data)
-	if n == 0 {
-		return 0
-	}
-	// sort.Float64s(data)
-
-	ratio := pct / 100.0
-	n1 := min(n, int(math.Ceil(float64(n)*ratio)))
-	n2 := max(0, int(math.Floor(float64(n)*ratio)))
-
-	return (data[n1-1] + data[n2-1]) / 2
-}
-
 // 计算单日成本价+成交量中值
-func (k *OHLCVList) GetCbjData(pTime string) CbjData {
+func (k *OHLCVList) ToCbjData(pTime string) CbjData {
 
 	nlen := len(*k)
 	if nlen == 0 {
@@ -407,7 +392,7 @@ func (k *OHLCVList) GetCbjData(pTime string) CbjData {
 
 	nup := int64(0)
 	ndown := int64(0)
-	vmed := k.GetVmed(12.5)
+	vmed := k.GetVmed(12.5) // 30个最大K线加权价
 
 	// var kCbj OHLCVList
 	// var kCb1 OHLCVList
@@ -479,7 +464,7 @@ func (k *OHLCVList) GetCbjData(pTime string) CbjData {
 }
 
 // 计算日频成本价+成交量中值
-func (k *OHLCVList) GetCbjList(pTime string) CbjList {
+func (k *OHLCVList) ToCbjList(pTime string) CbjList {
 	var kbList CbjList
 
 	nlen := len(*k)
@@ -501,7 +486,7 @@ func (k *OHLCVList) GetCbjList(pTime string) CbjList {
 	}
 
 	for _, v := range kDic {
-		kb := v.GetCbjData(pTime)
+		kb := v.ToCbjData(pTime)
 		kbList = append(kbList, kb)
 	}
 	kbList.Sort(false)
@@ -509,7 +494,7 @@ func (k *OHLCVList) GetCbjList(pTime string) CbjList {
 }
 
 // 计算日频成本价+成交量中值
-func (k *OHLCVList) ToVVList() VVList {
+func (k *OHLCVList) ToVVList(isOHLC bool, isV123 bool, isCbj bool) VVList {
 	var kbList VVList
 
 	nlen := len(*k)
@@ -532,7 +517,7 @@ func (k *OHLCVList) ToVVList() VVList {
 
 	for _, v := range kDic {
 		var kd VVData
-		kd.Init(v)
+		kd.Init(v, isOHLC, isV123, isCbj)
 		kbList = append(kbList, kd)
 	}
 

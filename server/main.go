@@ -67,8 +67,9 @@ func main() {
 	r.GET("/test3", srv.RouteTest3)
 
 	//====================================================
-	r.GET("/gmpe", srv.RouteGMpe)
 	r.GET("/gm1d", srv.RouteGM1d)
+	r.GET("/gmpe", srv.RouteGMpe)
+	r.GET("/gmvv", srv.RouteGMvv)
 	r.GET("/gm1m", srv.RouteGM1m)
 	r.GET("/api1m", srv.RouteGMApi1m)
 
@@ -81,7 +82,9 @@ func main() {
 	r.GET("/kbdictts", srv.RouteKBDictTS)
 	r.GET("/kbdict", srv.RouteKBDict)
 	r.GET("/kbars", srv.RouteKbars)
+	r.GET("/kbars2", srv.RouteKbars2)
 	r.GET("/kbarsn", srv.RouteKbarsN)
+	r.GET("/kbars2n", srv.RouteKbars2N)
 
 	r.GET("/current", srv.RouteCurrent)
 	//====================================================

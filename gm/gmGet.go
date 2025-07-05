@@ -2384,6 +2384,29 @@ func GetKbarsHisByte(gmapi string,
 }
 
 // 获取K线行情数据
+func GetKbarsHis2Byte(gmapi string,
+	symbols string, tag string,
+	stime string, etime string,
+	timeoutSeconds int) ([]byte, error) {
+
+	url := fmt.Sprintf("%s/get_his2", gmapi)
+	params := map[string]string{
+		"symbols": symbols,
+		"tag":     tag,
+		"stime":   stime,
+		"etime":   etime,
+	}
+
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		// fmt.Printf("获取数据失败: %s\n", err)
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+// 获取K线行情数据：输入参数为日期
 func GetKbarsHis(gmapi string,
 	symbols string, tag string,
 	sdate string, edate string, istimestamp bool,
@@ -2402,6 +2425,30 @@ func GetKbarsHis(gmapi string,
 	records, transformErr := rcd.ToRecords()
 	if transformErr != nil {
 		return nil, fmt.Errorf("转换数据失败(GetKbarsHisByte()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, istimestamp), nil
+}
+
+// 获取K线行情数据: 输入参数为时间
+func GetKbarsHis2(gmapi string,
+	symbols string, tag string,
+	stime string, etime string, istimestamp bool,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	rawData, err := GetKbarsHis2Byte(gmapi, symbols, tag, stime, etime, timeoutSeconds)
+	if err != nil {
+		return nil, fmt.Errorf("获取数据失败(GetKbarsHis2Byte()): %v", err)
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(rawData, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(GetKbarsHis2Byte()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(GetKbarsHis2()): %v", transformErr)
 	}
 
 	return ConvertEob2Timestamp(records, istimestamp), nil
@@ -2433,6 +2480,31 @@ func GetKbarsHisNByte(gmapi string,
 }
 
 // 获取K线行情数据
+func GetKbarsHis2NByte(gmapi string,
+	symbol string, tag string,
+	count string, etime string,
+	timeoutSeconds int) ([]byte, error) {
+
+	url := fmt.Sprintf("%s/get_his2_n", gmapi)
+	params := map[string]string{
+		"symbol": symbol,
+		"tag":    tag,
+		"etime":  etime,
+	}
+	if count != "" {
+		params["count"] = count
+	}
+
+	resp, err := fetchURLData(url, time.Duration(timeoutSeconds)*time.Second, params)
+	if err != nil {
+		// fmt.Printf("获取数据失败: %s\n", err)
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+// 获取K线行情数据：输入参数为日期
 func GetKbarsHisN(gmapi string,
 	symbol string, tag string,
 	count string, edate string, istimestamp bool,
@@ -2451,6 +2523,30 @@ func GetKbarsHisN(gmapi string,
 	records, transformErr := rcd.ToRecords()
 	if transformErr != nil {
 		return nil, fmt.Errorf("转换数据失败(GetKbarsHisN()): %v", transformErr)
+	}
+
+	return ConvertEob2Timestamp(records, istimestamp), nil
+}
+
+// 获取K线行情数据：输入参数为时间
+func GetKbarsHis2N(gmapi string,
+	symbol string, tag string,
+	count string, etime string, istimestamp bool,
+	timeoutSeconds int) ([]map[string]any, error) {
+
+	rawData, err := GetKbarsHis2NByte(gmapi, symbol, tag, count, etime, timeoutSeconds)
+	if err != nil {
+		return nil, fmt.Errorf("获取数据失败(GetKbarsHis2NByte()): %v", err)
+	}
+
+	var rcd RawColData
+	if unmarshalErr := json.Unmarshal(rawData, &rcd); unmarshalErr != nil {
+		return nil, fmt.Errorf("解析 JSON 数据失败(GetKbarsHis2NByte()): %v", unmarshalErr)
+	}
+
+	records, transformErr := rcd.ToRecords()
+	if transformErr != nil {
+		return nil, fmt.Errorf("转换数据失败(GetKbarsHis2N()): %v", transformErr)
 	}
 
 	return ConvertEob2Timestamp(records, istimestamp), nil
@@ -3046,18 +3142,27 @@ func GetGM1m(gmcsv string, gmapi string,
 		return ddd, nil
 	}
 
-	dapi, _ := GetKbarsHis(gmapi, symbol, "1m", sday, eday, istimestamp, timeoutSeconds)
-	for i := range dapi {
-		// 去掉API数据中的symbol字段
-		dd1 := make(map[string]any, 6)
+	// dapi, _ := GetKbarsHis(gmapi, symbol, "1m", sday, eday, istimestamp, timeoutSeconds)
+	// for i := range dapi {
+	// 	// 去掉API数据中的symbol字段
+	// 	dd1 := make(map[string]any, 6)
 
-		dd1["timestamp"] = dapi[i]["timestamp"]
-		dd1["open"] = dapi[i]["open"]
-		dd1["high"] = dapi[i]["high"]
-		dd1["low"] = dapi[i]["low"]
-		dd1["close"] = dapi[i]["close"]
-		dd1["volume"] = dapi[i]["volume"]
-		ddd = append(ddd, dd1)
+	// 	dd1["timestamp"] = dapi[i]["timestamp"]
+	// 	dd1["open"] = dapi[i]["open"]
+	// 	dd1["high"] = dapi[i]["high"]
+	// 	dd1["low"] = dapi[i]["low"]
+	// 	dd1["close"] = dapi[i]["close"]
+	// 	dd1["volume"] = dapi[i]["volume"]
+	// 	ddd = append(ddd, dd1)
+	// }
+	// fmt.Printf("获取API数据成功: %d条: %s - %s\n", len(dapi), sday, eday)
+
+	// 按日期aq列表从gm-api获取单支股票分时行情数据
+	datelist, _ := GetDatesList(gmapi, sday, eday, timeoutSeconds)
+	// fmt.Printf("获取日期列表成功: %d天: %s - %s\n", len(datelist), sday, eday)
+	dapi, _ := Get1mByDatelist(gmapi, symbol, datelist, istimestamp, timeoutSeconds)
+	if len(dapi) > 0 {
+		ddd = append(ddd, dapi...)
 	}
 
 	return ddd, nil
@@ -3118,33 +3223,36 @@ func GetGMpe(gmcsv string, gmapi string,
 
 	rsp, _ := GetDailyValuation(gmapi, symbol, sday, eday, fields, timeoutSeconds)
 	ddd := Records2Timestamp(rsp, istimestamp, "trade_date")
-	// for i := range rsp {
-	// 	// 去掉API数据中的symbol字段
-	// 	dd1 := make(map[string]any)
-	// 	for k, v := range rsp[i] {
-	// 		if k == "trade_date" {
-	// 			key := "timestamp"
-	// 			tstr := v.(string)
-	// 			tt, err := ParseTimestamp(tstr)
-	// 			if err != nil {
-	// 				continue
-	// 			}
-	// 			if istimestamp {
-	// 				dd1[key] = tt.UnixMilli()
-	// 			} else {
-	// 				if len(tstr) <= 10 {
-	// 					dd1[key] = tt.Format("2006-01-02")
-	// 				} else {
-	// 					dd1[key] = tt.Format("2006-01-02 15:04:05")
-	// 				}
-	// 			}
-	// 		} else {
-	// 			dd1[k] = v
-	// 		}
-	// 	}
 
-	// 	ddd = append(ddd, dd1)
-	// }
+	return ddd, nil
+}
+
+// 按日频行情数据：包括v931,v932,v935,。。。
+func GetGMvv(gmcsv string, gmapi string,
+	symbol string, sdate string, edate string, indicators string, istimestamp bool, include bool, is1m bool,
+	timeoutSeconds int) (map[string]any, error) {
+
+	ddd := make(map[string]any)
+
+	if sdate > edate {
+		return nil, fmt.Errorf("开始日期大于结束日期: sdate=%s, edate=%s", sdate, edate)
+	}
+
+	rawData, err := GetGM1m(gmcsv, gmapi, symbol, sdate, edate, istimestamp, include, timeoutSeconds)
+	if err != nil {
+		return nil, fmt.Errorf("获取GM数据失败: %w", err)
+	}
+
+	ohlcv := OHLCVList{}
+	ohlcv.FromMapList(rawData)
+
+	isOHLC, isV123, isCbj := CheckIndicators(indicators)
+	vvl := ohlcv.ToVVList(isOHLC, isV123, isCbj)
+
+	ddd["1dvv"] = vvl.ToRecords(isOHLC, isV123, isCbj, istimestamp)
+	if is1m {
+		ddd["1mkb"] = rawData
+	}
 
 	return ddd, nil
 }
@@ -3164,7 +3272,7 @@ func Get1mByDatelist(gmapi string,
 		// 处理一下数据结构，使得CSV数据和API数据合并
 		for i := range dapi {
 			// 去掉API数据中的symbol字段
-			dd1 := make(map[string]any, 6)
+			dd1 := make(map[string]any)
 
 			dd1["timestamp"] = dapi[i]["timestamp"]
 			dd1["open"] = dapi[i]["open"]

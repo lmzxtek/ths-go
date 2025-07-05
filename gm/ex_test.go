@@ -43,9 +43,10 @@ func TestKBDataMinute(t *testing.T) {
 	// fmt.Println("=" + strings.Repeat("=", 50))
 
 	var kbList OHLCVList
-	kbList.ReadMapList(rsp)
+	kbList.FromMapList(rsp)
 	kbList.Head(5)
 	kbList.Tail(5)
+	fmt.Println("=" + strings.Repeat("=", 50))
 	// kbList.Sort(true)
 	// kbList.Head(5)
 	// kbList.Tail(5)
@@ -72,7 +73,7 @@ func TestKBDataMinute(t *testing.T) {
 	// cbj := kbList.GetCbjList("10:00:00")
 	// cbj.Tail(5)
 
-	vvl := kbList.ToVVList()
+	vvl := kbList.ToVVList(true, true, true)
 	vvl.Tail(5, true, true, true)
 }
 
@@ -1437,6 +1438,33 @@ func TestGetKbars2(t *testing.T) {
 	ists = false
 
 	resp, err := GetKbarsHis(url, symbols, tag, sdate, edate, ists, timeoutSeconds)
+	if err != nil {
+		fmt.Printf("获取数据失败: %s\n", err)
+	}
+	recordsJSON, _ := json.MarshalIndent(resp[max(0, len(resp)-3):], "", "  ") // 格式化输出 JSON
+	// fmt.Printf("%s\n", recordsJSON)
+	fmt.Println(string(recordsJSON))
+	// fmt.Println(resp[:5])
+}
+func TestGetKB1mByDateList(t *testing.T) {
+	fmt.Println(" -=> Start fetch kbars history data using GM-api ... ")
+
+	url := gmURL
+	timeoutSeconds := 30
+
+	// symbols := "SHSE.601088,SZSE.300917"
+	symbols := "SHSE.601088"
+	sdate := "2025-07-01"
+	edate := "2025-07-04"
+	// tag := "1d"
+	// tag := "1m"
+	ists := true
+	ists = false
+
+	datelist, _ := GetDatesList(url, sdate, edate, timeoutSeconds)
+	fmt.Printf("获取日期列表成功: %d天: %s - %s\n", len(datelist), sdate, edate)
+
+	resp, err := Get1mByDatelist(url, symbols, datelist, ists, timeoutSeconds)
 	if err != nil {
 		fmt.Printf("获取数据失败: %s\n", err)
 	}

@@ -94,6 +94,7 @@ func BuildHTML2(cfg HTMLConfig) string {
 	strPreMonth := now.AddDate(0, -1, 0).Format("2006-01-02")
 	strPreMonth2 := now.AddDate(0, -1, 0).Format("01")
 	strPreDay := now.AddDate(0, 0, -1).Format("2006-01-02")
+	strPreDay5 := now.AddDate(0, 0, -5).Format("2006-01-02")
 	preYear := now.AddDate(-1, 0, 0)
 	strYear1 := preYear.Format("2006")
 	strPreYear := preYear.Format("2006-01-02")
@@ -184,10 +185,16 @@ func BuildHTML2(cfg HTMLConfig) string {
 	kb1d2 := "gm1d?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true"
 	kb1d3 := "gm1d?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&isdic=true"
 	kb1d4 := "gm1d?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true" + "&isdic=true"
-	kb1d5 := "gmpe?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
-	kb1d6 := "gmpe?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&fields=pe_ttm"
-	kb1d7 := "gmpe?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true" + "&isdic=true" + "&fields=pe_ttm"
-	kb1d8 := "gmpe?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true" + "&isdic=true"
+
+	kbvv1 := "gmvv?symbol=" + sym
+	kbvv2 := "gmvv?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
+	kbvv3 := "gmvv?symbol=" + sym + "&sdate=" + strPreDay5 + "&edate=" + today + "&is1m=false"
+	kbvv4 := "gmvv?symbol=" + sym + "&sdate=" + strPreDay5 + "&edate=" + today + "&is1m=false" + "&time_stamp=true"
+
+	kbpe1 := "gmpe?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today
+	kbpe2 := "gmpe?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&fields=pe_ttm"
+	kbpe3 := "gmpe?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true" + "&isdic=true" + "&fields=pe_ttm"
+	kbpe4 := "gmpe?symbol=" + sym + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true" + "&isdic=true"
 
 	kbGM1 := "gm1m?symbol=" + sym
 	kbGM2 := "gm1m?symbol=" + sym + "&time_stamp=true"
@@ -203,6 +210,10 @@ func BuildHTML2(cfg HTMLConfig) string {
     <h3>历史行情</h3>
     <ul>
 		<li>日频数据(1d)  <br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
@@ -230,10 +241,16 @@ func BuildHTML2(cfg HTMLConfig) string {
 		url, kb1d2, url, kb1d2,
 		url, kb1d3, url, kb1d3,
 		url, kb1d4, url, kb1d4,
-		url, kb1d5, url, kb1d5,
-		url, kb1d6, url, kb1d6,
-		url, kb1d7, url, kb1d7,
-		url, kb1d8, url, kb1d8,
+
+		url, kbvv1, url, kbvv1,
+		url, kbvv2, url, kbvv2,
+		url, kbvv3, url, kbvv3,
+		url, kbvv4, url, kbvv4,
+
+		url, kbpe1, url, kbpe1,
+		url, kbpe2, url, kbpe2,
+		url, kbpe3, url, kbpe3,
+		url, kbpe4, url, kbpe4,
 
 		url, kbGM1, url, kbGM1,
 		url, kbGM2, url, kbGM2,
@@ -262,9 +279,13 @@ func BuildHTML2(cfg HTMLConfig) string {
 	kbAPI4 := "kbars?symbols=" + syms + "&sdate=" + strPreMonth + "&edate=" + today
 	kbAPI5 := "kbars?symbols=" + syms + "&sdate=" + strPreYear + "&edate=" + today + "&tag=1d"
 	kbAPI6 := "kbars?symbols=" + syms + "&sdate=" + strPreYear + "&edate=" + today + "&tag=1d" + "&time_stamp=true"
-	kbAPI7 := "kbarsn?symbol=" + sym + "&count=90" + "&tag=1m"
-	kbAPI8 := "kbarsn?symbol=" + sym + "&count=30" + "&edate=" + today + "&tag=1d"
-	kbAPI9 := "kbarsn?symbol=" + sym + "&count=30" + "&edate=" + today + "&tag=1d" + `&time_stamp=true`
+
+	kAPIN1 := "kbarsn?symbol=" + sym + "&count=90" + "&tag=1m"
+	kAPIN2 := "kbarsn?symbol=" + sym + "&count=30" + "&edate=" + today + "&tag=1d"
+	kAPIN3 := "kbarsn?symbol=" + sym + "&count=30" + "&edate=" + today + "&tag=1d" + `&time_stamp=true`
+
+	kAPI21 := "kbars2?symbols=" + syms + "&stime=" + strPreMonth + " 10:45:00" + "&etime=" + strPreMonth + " 11:15:00"
+	kAPI22 := "kbars2n?symbol=" + sym + "&count=30" + "&tag=1m" + "&etime=" + today + " 10:15:00"
 
 	kbDic1 := "kbdict?symbols=" + syms + "&tag=1d" + "&sdate=" + strPreMonth + "&edate=" + today
 	kbDic2 := "kbdict?symbols=" + syms + "&tag=1d" + "&sdate=" + strPreMonth + "&edate=" + today + "&time_stamp=true"
@@ -295,6 +316,8 @@ func BuildHTML2(cfg HTMLConfig) string {
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br><br>
+			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
 			<a href="http://%s/%s" target="_blank">http://%s/%s</a><br>
@@ -315,9 +338,13 @@ func BuildHTML2(cfg HTMLConfig) string {
 		url, kbAPI4, url, kbAPI4,
 		url, kbAPI5, url, kbAPI5,
 		url, kbAPI6, url, kbAPI6,
-		url, kbAPI7, url, kbAPI7,
-		url, kbAPI8, url, kbAPI8,
-		url, kbAPI9, url, kbAPI9,
+
+		url, kAPIN1, url, kAPIN1,
+		url, kAPIN2, url, kAPIN2,
+		url, kAPIN3, url, kAPIN3,
+
+		url, kAPI21, url, kAPI21,
+		url, kAPI22, url, kAPI22,
 
 		url, kbDic1, url, kbDic1,
 		url, kbDic2, url, kbDic2,
@@ -1786,7 +1813,7 @@ func RouteGMApi1m(c *gin.Context) {
 		return
 	}
 
-	timeoutSeconds := 30
+	timeoutSeconds := 300
 	today := time.Now().Format("2006-01-02")
 	sdate := c.DefaultQuery("sdate", today)
 	edate := c.DefaultQuery("edate", today)
@@ -1822,7 +1849,7 @@ func RouteKbars(c *gin.Context) {
 	edate := c.DefaultQuery("edate", today)
 	tag := c.DefaultQuery("tag", "1m")
 	timestamp := c.DefaultQuery("time_stamp", "false")
-	timeoutSeconds := 30
+	timeoutSeconds := 300
 
 	istimestamp := false
 	if timestamp == "true" {
@@ -1831,7 +1858,7 @@ func RouteKbars(c *gin.Context) {
 	// rawData, err := gm.GetKbarsHisByte(gmapi, symbols, tag, sdate, edate, timeoutSeconds)
 	rawData, err := gm.GetKbarsHis(gmapi, symbols, tag, sdate, edate, istimestamp, timeoutSeconds)
 	if err != nil {
-		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetKbarsHis)": err.Error()})
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetKbarsHis2)": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, rawData)
@@ -1851,6 +1878,33 @@ func RouteKbars(c *gin.Context) {
 	// c.JSON(http.StatusOK, records)
 }
 
+func RouteKbars2(c *gin.Context) {
+	symbols := c.DefaultQuery("symbols", "")
+	if symbols == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	today := time.Now().Format("2006-01-02")
+	sdate := c.DefaultQuery("stime", today)
+	edate := c.DefaultQuery("etime", today)
+	tag := c.DefaultQuery("tag", "1m")
+	timestamp := c.DefaultQuery("time_stamp", "false")
+	timeoutSeconds := 300
+
+	istimestamp := false
+	if timestamp == "true" {
+		istimestamp = true
+	}
+	// rawData, err := gm.GetKbarsHisByte(gmapi, symbols, tag, sdate, edate, timeoutSeconds)
+	rawData, err := gm.GetKbarsHis2(gmapi, symbols, tag, sdate, edate, istimestamp, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetKbarsHis)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
 // 获取股票当日的 K 线数据，返回字典json格式，键为代码，值为K线数据
 func RouteKBDict(c *gin.Context) {
 	symbols := c.DefaultQuery("symbols", "")
@@ -1864,7 +1918,7 @@ func RouteKBDict(c *gin.Context) {
 	edate := c.DefaultQuery("edate", today)
 	tag := c.DefaultQuery("tag", "1m")
 	timestamp := c.DefaultQuery("time_stamp", "false")
-	timeoutSeconds := 30
+	timeoutSeconds := 300
 
 	istimestamp := false
 	if timestamp == "true" {
@@ -1892,7 +1946,7 @@ func RouteKBDictTS(c *gin.Context) {
 	edate := c.DefaultQuery("edate", today)
 	tag := c.DefaultQuery("tag", "1m")
 	timestamp := c.DefaultQuery("time_stamp", "false")
-	timeoutSeconds := 30
+	timeoutSeconds := 300
 
 	istimestamp := false
 	if timestamp == "true" {
@@ -1935,6 +1989,33 @@ func RouteKbarsN(c *gin.Context) {
 	rawData, err := gm.GetKbarsHisN(gmapi, symbol, tag, count, edate, istimestamp, timeoutSeconds)
 	if err != nil {
 		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetKbarsHisN)": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, rawData)
+}
+
+func RouteKbars2N(c *gin.Context) {
+	symbol := c.DefaultQuery("symbol", "")
+	if symbol == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbols 参数为必须"))
+		return
+	}
+
+	today := time.Now().Format("2006-01-02")
+	edate := c.DefaultQuery("etime", today)
+	count := c.DefaultQuery("count", "")
+	tag := c.DefaultQuery("tag", "1d")
+	timestamp := c.DefaultQuery("time_stamp", "false")
+	timeoutSeconds := 30
+
+	istimestamp := false
+	if timestamp == "true" {
+		istimestamp = true
+	}
+
+	rawData, err := gm.GetKbarsHis2N(gmapi, symbol, tag, count, edate, istimestamp, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetKbarsHis2N)": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, rawData)
@@ -2111,7 +2192,7 @@ func RouteGM1m(c *gin.Context) {
 		return
 	}
 
-	timeoutSeconds := 30
+	timeoutSeconds := 300
 	now := time.Now()
 	today := now.Format("2006-01-02")
 	prday := now.AddDate(0, 0, -1)
@@ -2151,7 +2232,7 @@ func RouteGM1d(c *gin.Context) {
 		return
 	}
 
-	timeoutSeconds := 30
+	timeoutSeconds := 60
 	now := time.Now()
 	today := now.Format("2006-01-02")
 	prday := now.AddDate(0, 0, -1)
@@ -2198,6 +2279,52 @@ func RouteGM1d(c *gin.Context) {
 	}
 }
 
+func RouteGMvv(c *gin.Context) {
+	symbol := c.DefaultQuery("symbol", "")
+	if symbol == "" {
+		c.JSON(http.StatusBadRequest, fmt.Errorf("symbol 参数为必须参数"))
+		return
+	}
+
+	timeoutSeconds := 300
+	now := time.Now()
+	today := now.Format("2006-01-02")
+	prday := now.AddDate(0, 0, -1)
+	yesterday := prday.Format("2006-01-02")
+
+	// tag := c.DefaultQuery("tag", "1m")
+	timestamp := c.DefaultQuery("time_stamp", "false")
+	istimestamp := false
+	if timestamp == "true" {
+		istimestamp = true
+	}
+	is1m := c.DefaultQuery("is1m", "true")
+	b1m := true
+	if is1m == "false" {
+		b1m = false
+	}
+	include := c.DefaultQuery("include", "true")
+	isinclude := true
+	if include == "false" {
+		isinclude = false
+	}
+	indicators := c.DefaultQuery("indicators", "pvj,v931,vmed")
+
+	cday := yesterday
+	if isinclude && gm.IsAOpen() {
+		cday = today
+	}
+	sdate := c.DefaultQuery("sdate", cday)
+	edate := c.DefaultQuery("edate", cday)
+
+	rawData, err := gm.GetGMvv(gmcsv, gmapi, symbol, sdate, edate, indicators, istimestamp, isinclude, b1m, timeoutSeconds)
+	if err != nil {
+		c.JSON(http.StatusNotAcceptable, gin.H{" Err(gm.GetGM1d)": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, rawData)
+}
 func RouteGMpe(c *gin.Context) {
 	symbol := c.DefaultQuery("symbol", "")
 	if symbol == "" {
@@ -2205,7 +2332,7 @@ func RouteGMpe(c *gin.Context) {
 		return
 	}
 
-	timeoutSeconds := 30
+	timeoutSeconds := 60
 	now := time.Now()
 	today := now.Format("2006-01-02")
 	prday := now.AddDate(0, 0, -1)
